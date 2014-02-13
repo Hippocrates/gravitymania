@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{BA0D0168-744C-433E-8F47-001110A6348E}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>gravitymaniatest</RootNamespace>
+    <AssemblyName>NUnitTest1</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <PlatformTarget>x86</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Xna.Framework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=842cf8be1de50553, processorArchitecture=x86" />
+    <Reference Include="nunit-console-runner">
+      <HintPath>NUnit\nunit-console-runner.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.framework, Version=2.5.10.11092, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>NUnit\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="asset\TestAssetManager.cs" />
+    <Compile Include="console\TestAddRemoveDispatcher.cs" />
+    <Compile Include="input\RandomInputState.cs" />
+    <Compile Include="input\TestInputEventManager.cs" />
+    <Compile Include="map\TestLoadMap.cs" />
+    <Compile Include="reflection\TestMemberIterator.cs" />
+    <Compile Include="reflection\TestStringReflector.cs" />
+    <Compile Include="console\TestConsoleHistory.cs" />
+    <Compile Include="console\TestConsoleInputLine.cs" />
+    <Compile Include="input\TestRawKey.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="camera\TestCamera.cs" />
+    <Compile Include="console\TestConsoleKeyReader.cs" />
+    <Compile Include="input\TestKeyMap.cs" />
+    <Compile Include="reflection\TestStringSerialization.cs" />
+    <Compile Include="reflection\TestStringSerializationAttribute.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="lib\nunit-console-runner.dll" />
+    <None Include="lib\nunit.framework.dll" />
+    <None Include="lib\nunit.mocks.dll" />
+    <None Include="lib\nunit.util.dll" />
+    <None Include="lib\nunit.core.interfaces.dll" />
+    <None Include="lib\nunit.core.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\gravitymania\gravitymania.csproj">
+      <Project>{B852BF01-4DA1-475A-ABE0-D8CE25161528}</Project>
+      <Name>gravitymania</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
