@@ -48,16 +48,29 @@ namespace gravitymania.camera
             }
         }
 
+        public Vector2 DrawOffset
+        {
+            get
+            {
+                return _DrawOffset;
+            }
+            set
+            {
+                _DrawOffset = value;
+            }
+        }
+
         private bool InvertY;
 
         /// <summary>
         /// Build a new camera given the physical viewport in pixels and the field of view size in game units.
         /// </summary>
-        public Camera(Vector2 viewportSize, Vector2 fieldSize, Vector2 initialPosition, bool invertY = false)
+        public Camera(Vector2 viewportSize, Vector2 fieldSize, Vector2 initialPosition, Vector2 drawOffset = new Vector2(), bool invertY = false)
         {
             _ViewportSize = viewportSize;
             _FieldSize = fieldSize;
             _Position = initialPosition;
+            _DrawOffset = drawOffset;
             InvertY = invertY;
 
             RecalculateWorldToViewMatrix();
@@ -68,7 +81,7 @@ namespace gravitymania.camera
         /// </summary>
         public Vector2 TransformToView(Vector2 position)
         {
-            return Vector2.Transform(position, WorldToViewport);
+            return Vector2.Transform(position, WorldToViewport) + DrawOffset;
         }
 
         public Vector2 GetViewLockPosition(Vector2 targetPosition, Vector2 screenLock)
@@ -82,7 +95,7 @@ namespace gravitymania.camera
         /// </summary>
         public Vector2 TransformToWorld(Vector2 screenPosition)
         {
-            return Vector2.Transform(screenPosition, ViewportToWorld);
+            return Vector2.Transform(screenPosition, ViewportToWorld) - DrawOffset;
         }
 
         public AABBox GetFieldBounds()
@@ -93,7 +106,7 @@ namespace gravitymania.camera
         /// <summary>
         /// Takes a world-space AABB and transforms it into a screen rectangle
         /// </summary>
-        public Rectangle FieldBoundsToViewRectangle(AABBox fieldBounds)
+        public Rectangle TransformToView(AABBox fieldBounds)
         {
             // This method needs to compensate for the fact that I'm fliping the y co-ords
             // to be the opposite of screen co-ords
@@ -142,6 +155,7 @@ namespace gravitymania.camera
         private Vector2 _Position;
         private Vector2 _ViewportSize;
         private Vector2 _FieldSize;
+        private Vector2 _DrawOffset;
     }
 }
 

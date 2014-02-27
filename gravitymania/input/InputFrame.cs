@@ -28,6 +28,11 @@ namespace gravitymania.input
             }
         }
 
+        public void SetState(ButtonEnum b, bool val)
+        {
+            keys.Set((int)(object)b, val);
+        }
+
 		public bool IsDown(ButtonEnum b)
         {
 			return keys.Get((int)(object)b);

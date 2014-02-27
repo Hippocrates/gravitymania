@@ -125,11 +125,14 @@
     <Compile Include="mapedit\MapEditor.cs" />
     <Compile Include="map\TileMap.cs" />
     <Compile Include="math\AABBox.cs" />
+    <Compile Include="math\Ellipse.cs" />
     <Compile Include="math\Line2d.cs" />
     <Compile Include="graphics\TextureAsset.cs" />
     <Compile Include="graphics\TextureAssetManager.cs" />
     <Compile Include="math\NumTools.cs" />
     <Compile Include="math\VectorTools.cs" />
+    <Compile Include="player\Player.cs" />
+    <Compile Include="player\PlayerKey.cs" />
     <Compile Include="reflection\MemberIterator.cs" />
     <Compile Include="reflection\StringReflector.cs" />
     <Compile Include="reflection\Serializer.cs" />
