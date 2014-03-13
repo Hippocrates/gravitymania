@@ -6,7 +6,21 @@ using Microsoft.Xna.Framework;
 
 namespace gravitymania.math
 {
-    public class Ellipse
+    public struct Circle
+    {
+        public Circle(Vector2 position, float radius)
+        {
+            Position = position;
+            Radius = radius;
+        }
+
+        public Vector2 Position;
+        public float Radius;
+
+
+    }
+
+    public struct Ellipse
     {
         public Ellipse(Vector2 position, Vector2 size)
         {
@@ -17,14 +31,13 @@ namespace gravitymania.math
         public Vector2 Size;
         public Vector2 Position;
 
-        public Matrix ESpace
+        public Vector2 ESpace
         {
             get
             {
-                return Matrix.CreateScale(1.0f / Size.X, 1.0f / Size.Y, 1.0f);
+                return new Vector2(1.0f / Size.X, 1.0f / Size.Y);
             }
         }
-
 
     }
 }

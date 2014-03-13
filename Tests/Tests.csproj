@@ -56,6 +56,7 @@
     <Compile Include="input\RandomInputState.cs" />
     <Compile Include="input\TestInputEventManager.cs" />
     <Compile Include="map\TestLoadMap.cs" />
+    <Compile Include="math\TestCollision.cs" />
     <Compile Include="reflection\TestMemberIterator.cs" />
     <Compile Include="reflection\TestStringReflector.cs" />
     <Compile Include="console\TestConsoleHistory.cs" />

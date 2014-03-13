@@ -14,10 +14,16 @@ namespace gravitymania.player
 {
     public class Player
     {
+        private const float Gravity = 0.5f;
+        private const float JumpVelocity = 10.0f;
+        private static readonly float JumpHeight = (JumpVelocity / 2.0f) * (JumpVelocity / Gravity);
+
         private Texture2D Image;
         public Vector2 HalfWidth;
         public Vector2 Position;
         public Vector2 Velocity;
+        public Vector2 AffectedVelocity;
+        public Vector2 LastKnownGroundPosition;
         public InputFrame<PlayerKey> InputState;
 
         public bool Grounded;
@@ -27,6 +33,7 @@ namespace gravitymania.player
             Position = position;
             HalfWidth = halfWidth;
             Velocity = new Vector2(0.0f, 0.0f);
+            AffectedVelocity = new Vector2(0.0f, 0.0f);
 
             Image = new Texture2D(game.Root.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             Image.SetData(new[] { Color.White });
@@ -64,39 +71,29 @@ namespace gravitymania.player
 
             if (Grounded && InputState.IsDown(PlayerKey.JUMP))
             {
-                for (int i = 0; i < 2; ++i)
-                {
-                    if (game.Players[i] != this)
-                    {
-                        if (!game.Players[i].Grounded)
-                        {
-                            game.Players[i].Velocity.Y -= 10.0f;
-                        }
-                    }
-                }
-
-                Velocity.Y = 10.0f;
+                Velocity.Y = JumpVelocity;
                 Grounded = false;
             }
             else if (!Grounded)
             {
-                Velocity.Y += -0.5f;
+                Velocity.Y -= Gravity;
+            }
 
-                if (Velocity.Y < 0.0f)
+            Player other = OtherPlayer(game);
+
+            if (!Grounded && !other.Grounded)
+            {
+                if (Velocity.Y > 0.0f && other.Velocity.Y > 0.0f)
                 {
-
-                    for (int i = 0; i < 2; ++i)
+                    float ratio = (Math.Max(CurrentJumpHeight(), 0.0f) + Math.Max(other.CurrentJumpHeight(), 0.0f)) / JumpHeight;
+                    if (ratio <= 1.0f)
                     {
-                        if (game.Players[i] != this)
-                        {
-                            if (!game.Players[i].Grounded)
-                            {
-                                game.Players[i].Velocity.Y += 0.5f;
-                            }
-                        }
+                        ratio = 1.0f;
                     }
+
+
+                    AffectedVelocity = Velocity - ((JumpHeight * other.Velocity) / )
                 }
-               
             }
 
             Position += Velocity;
@@ -106,8 +103,30 @@ namespace gravitymania.player
                 Velocity.Y = 0.0f;
                 Position.Y = HalfWidth.Y;
                 Grounded = true;
-                
             }
+
+            if (Grounded)
+            {
+                LastKnownGroundPosition = Position - new Vector2(0.0f, HalfWidth.Y);
+            }
+        }
+
+        public float CurrentJumpHeight()
+        {
+            return Position.Y - LastKnownGroundPosition.Y;
+        }
+
+        private Player OtherPlayer(MainGame game)
+        {
+            for (int i = 0; i < 2; ++i)
+            {
+                if (game.Players[i] != this)
+                {
+                    return game.Players[i];
+                }
+            }
+
+            return null;
         }
 
         public void Render(SpriteBatch drawer, Camera camera)

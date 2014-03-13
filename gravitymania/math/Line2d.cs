@@ -16,7 +16,9 @@ namespace gravitymania.math
         public LineEquation(float a, float b, float c)
         {
             Normal = new Vector2(a, b);
-            C = c;
+            float Length = Normal.Length();
+            Normal /= Length;
+            C = c / Length;
         }
 
         public float MultiplyThrough(Vector2 p)

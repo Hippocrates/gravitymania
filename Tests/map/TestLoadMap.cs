@@ -16,10 +16,10 @@ namespace gravitymaniatest.map
 
             Assert.AreEqual(4, result.Width);
             Assert.AreEqual(4, result.Height);
-            Assert.AreEqual(CollisionType.Empty, result.GetTile(0, 0).Collision);
-            Assert.AreEqual(CollisionType.SolidBox, result.GetTile(0, 1).Collision);
-            Assert.AreEqual(CollisionType.Empty, result.GetTile(0, 2).Collision);
-            Assert.AreEqual(CollisionType.SolidBox, result.GetTile(0, 3).Collision);
+            Assert.AreEqual(CollisionType.SolidBox, result.GetTile(0, 0).Collision);
+            Assert.AreEqual(CollisionType.Empty, result.GetTile(0, 1).Collision);
+            Assert.AreEqual(CollisionType.SolidBox, result.GetTile(0, 2).Collision);
+            Assert.AreEqual(CollisionType.Empty, result.GetTile(0, 3).Collision);
         }
     }
 }
