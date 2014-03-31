@@ -88,7 +88,7 @@ namespace gravitymaniatest.math
             bool collided = Algebra.CollideEllipseWithLine(ellipse, velocity, line, out result);
 
             Assert.IsTrue(collided);
-            Assert.That(result.Time, Is.EqualTo(0.834).Within(0.00001f));
+            Assert.That(result.Time, Is.EqualTo(0.08348483).Within(0.00001f));
             Assert.That(result.Position.X, Is.EqualTo(line.End.X).Within(0.00001f));
             Assert.That(result.Position.Y, Is.EqualTo(line.End.Y).Within(0.00001f));
         }

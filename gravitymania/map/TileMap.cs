@@ -12,12 +12,109 @@ namespace gravitymania.map
     {
         Empty = 0,
         SolidBox = 1, 
+		AngleBottomRight = 2,
+		AngleBottomLeft = 3,
+		AngleTopLeft = 4,
+		AngleTopRight = 5,
     }
+
+	class CollisionTypeGeometry
+	{
+		private static readonly LineSegment[][] Geometries = new LineSegment[Enum.GetNames(typeof(CollisionType)).Length][];
+
+		static CollisionTypeGeometry()
+		{
+			Vector2 bottomLeft = new Vector2(0.0f, 0.0f);
+			Vector2 topLeft = new Vector2(0.0f, 1.0f);
+			Vector2 bottomRight = new Vector2(1.0f, 0.0f);
+			Vector2 topRight = new Vector2(1.0f, 0.0f);
+
+			Geometries[(int)CollisionType.Empty] = new LineSegment[] { };
+			Geometries[(int)CollisionType.SolidBox] = new LineSegment[] 
+			{ 
+				new LineSegment(topLeft, topRight), 
+				new LineSegment(topRight, bottomRight),
+				new LineSegment(bottomRight, bottomLeft),
+				new LineSegment(bottomLeft, topLeft),
+			};
+
+			Geometries[(int)CollisionType.AngleBottomRight] = new LineSegment[] 
+			{ 
+				new LineSegment(bottomLeft, topRight),
+				new LineSegment(topRight, bottomRight),
+				new LineSegment(bottomRight, bottomLeft),
+			};
+
+			Geometries[(int)CollisionType.AngleBottomLeft] = new LineSegment[] 
+			{ 
+				new LineSegment(topLeft, bottomRight),
+				new LineSegment(bottomRight, bottomLeft),
+				new LineSegment(bottomLeft, topLeft),
+			};
+
+			Geometries[(int)CollisionType.AngleTopLeft] = new LineSegment[] 
+			{ 
+				new LineSegment(topRight, bottomLeft),
+				new LineSegment(bottomLeft, topLeft),
+				new LineSegment(topLeft, topRight), 
+			};
+
+			Geometries[(int)CollisionType.AngleTopRight] = new LineSegment[] 
+			{ 
+				new LineSegment(bottomRight, topLeft),
+				new LineSegment(topLeft, topRight), 
+				new LineSegment(topRight, bottomRight),
+			};
+		}
+
+		public static LineSegment[] GetGeometryTemplate(CollisionType self)
+		{
+			return Geometries[(int)self];
+		}
+	}
 
     public struct Tile
     {
         public CollisionType Collision;
     }
+
+	public struct TileIndex
+	{
+		public readonly int X;
+		public readonly int Y;
+		public TileIndex(int x, int y)
+		{
+			X = x;
+			Y = y;
+		}
+	}
+
+	public struct TileRange
+	{
+		public TileRange(int left, int bottom, int right, int top)
+		{
+			Left = left;
+			Top = top;
+			Right = right;
+			Bottom = bottom;
+		}
+
+		public readonly int Left;
+		public readonly int Top;
+		public readonly int Bottom;
+		public readonly int Right;
+
+		public IEnumerable<TileIndex> IterateTiles()
+		{
+			for (int y = Bottom; y <= Top; ++y)
+			{
+				for (int x = Left; x <= Right; ++x)
+				{
+					yield return new TileIndex(x, y);
+				}
+			}
+		}
+	}
 
     public class TileMap
     {
@@ -63,12 +160,12 @@ namespace gravitymania.map
             tiles[Index2d(x, y)] = tile;
         }
 
-        public Tuple<int, int, int, int> GetTileBounds(AABBox box)
+        public TileRange GetTileRange(AABBox box)
         {
             Vector2 min = box.Min / TileSize;
             Vector2 max = box.Max / TileSize;
 
-            return new Tuple<int, int, int, int>((int)Math.Floor(min.X), (int)Math.Floor(min.Y), (int)Math.Ceiling(max.X), (int) Math.Ceiling(max.Y));
+			return new TileRange((int)Math.Floor(min.X), (int)Math.Floor(min.Y), (int)Math.Ceiling(max.X), (int)Math.Ceiling(max.Y));
         }
 
         public AABBox GetTileBox(int x, int y)
@@ -77,6 +174,34 @@ namespace gravitymania.map
             Vector2 offset = new Vector2(TileSize, TileSize);
             return new AABBox(location, location + offset); 
         }
+
+		// Just to avoid re-allocating an empty array
+		private readonly static LineSegment[] EmptyArray = new LineSegment[]{};
+
+		// TODO: this is actually pretty wasteful, or just return the raw line segment and have the client do the affine xform?
+		// Or maybe cache this for a certain number of recently hit tiles?
+		// Whatever, this method by itself can still be used for the initial data grab, a caching system can be built on top of it.
+		public LineSegment[] GetTileGeometry(int x, int y)
+		{
+			Tile t = GetTile(x, y);
+			if (t.Collision == CollisionType.Empty)
+			{
+				return EmptyArray;
+			}
+
+			AABBox box = GetTileBox(x, y);
+
+			LineSegment[] template = CollisionTypeGeometry.GetGeometryTemplate(t.Collision);
+
+			LineSegment[] tileGeometry = new LineSegment[template.Length];
+
+			for (int i = 0; i < template.Length; ++i)
+			{
+				tileGeometry[i] = new LineSegment(box.Min + (template[i].Start * TileSize), box.Min + (template[i].End * TileSize));
+			}
+
+			return tileGeometry;
+		}
     }
 
     public static class TileMapLoader

@@ -62,7 +62,7 @@ namespace gravitymania.game
 
             for (int i = 0; i < 2; ++i)
             {
-                Players[i] = new Player(this, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 3 + TileSize / 2), new Vector2(TileSize / 2, TileSize / 2));
+                Players[i] = new Player(this, i, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 3 + TileSize / 2), new Vector2(TileSize / 2, TileSize / 2));
             }
         }
 
@@ -103,11 +103,11 @@ namespace gravitymania.game
 
             for (int i = 0; i < 2; ++i)
             {
-                Tuple<int, int, int, int> bounds = Maps[i].GetTileBounds(Cameras[i].GetFieldBounds());
+                TileRange bounds = Maps[i].GetTileRange(Cameras[i].GetFieldBounds());
 
-                for (int y = bounds.Item2; y <= bounds.Item4; ++y)
+                for (int y = bounds.Bottom; y <= bounds.Top; ++y)
                 {
-                    for (int x = bounds.Item1; x <= bounds.Item3; ++x)
+                    for (int x = bounds.Left; x <= bounds.Right; ++x)
                     {
                         Tile t = Maps[i].GetTile(x, y);
 
