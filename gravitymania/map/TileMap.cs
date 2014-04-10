@@ -24,10 +24,10 @@ namespace gravitymania.map
 
 		static CollisionTypeGeometry()
 		{
-			Vector2 bottomLeft = new Vector2(0.0f, 0.0f);
-			Vector2 topLeft = new Vector2(0.0f, 1.0f);
-			Vector2 bottomRight = new Vector2(1.0f, 0.0f);
-			Vector2 topRight = new Vector2(1.0f, 0.0f);
+            Vector2 bottomLeft = new Vector2(0.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
+            Vector2 topLeft = new Vector2(0.0f * TileMap.TileSize, 1.0f * TileMap.TileSize);
+            Vector2 bottomRight = new Vector2(1.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
+            Vector2 topRight = new Vector2(1.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
 
 			Geometries[(int)CollisionType.Empty] = new LineSegment[] { };
 			Geometries[(int)CollisionType.SolidBox] = new LineSegment[] 
@@ -118,7 +118,7 @@ namespace gravitymania.map
 
     public class TileMap
     {
-        public readonly int TileSize = 16;
+        public const int TileSize = 16;
 
         private Tile emptyTile = new Tile() { Collision = CollisionType.Empty };
 
@@ -178,6 +178,11 @@ namespace gravitymania.map
 		// Just to avoid re-allocating an empty array
 		private readonly static LineSegment[] EmptyArray = new LineSegment[]{};
 
+        public Vector2 GetTileOffset(int x, int y)
+        {
+            return new Vector2(x * TileSize, y * TileSize);
+        }
+
 		// TODO: this is actually pretty wasteful, or just return the raw line segment and have the client do the affine xform?
 		// Or maybe cache this for a certain number of recently hit tiles?
 		// Whatever, this method by itself can still be used for the initial data grab, a caching system can be built on top of it.
@@ -189,18 +194,7 @@ namespace gravitymania.map
 				return EmptyArray;
 			}
 
-			AABBox box = GetTileBox(x, y);
-
-			LineSegment[] template = CollisionTypeGeometry.GetGeometryTemplate(t.Collision);
-
-			LineSegment[] tileGeometry = new LineSegment[template.Length];
-
-			for (int i = 0; i < template.Length; ++i)
-			{
-				tileGeometry[i] = new LineSegment(box.Min + (template[i].Start * TileSize), box.Min + (template[i].End * TileSize));
-			}
-
-			return tileGeometry;
+			return CollisionTypeGeometry.GetGeometryTemplate(t.Collision);
 		}
     }
 

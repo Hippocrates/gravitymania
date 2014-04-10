@@ -33,10 +33,22 @@ namespace gravitymania.math
             return result;
         }
 
+        public void Translate(Vector2 diff)
+        {
+            Min += diff;
+            Max += diff;
+        }
+
         public void AddInternalPoint(Vector2 point)
         {
             Min = new Vector2(Math.Min(Min.X, point.X), Math.Min(Min.Y, point.Y));
             Max = new Vector2(Math.Max(Max.X, point.X), Math.Max(Max.Y, point.Y));
+        }
+
+        public void AddBox(AABBox other)
+        {
+            AddInternalPoint(other.Min);
+            AddInternalPoint(other.Max);
         }
 
         public bool IsContainedIn(Vector2 point)
