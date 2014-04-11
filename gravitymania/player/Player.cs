@@ -20,14 +20,13 @@ namespace gravitymania.player
         private const float UpwardCharge = 600.0f;
         private const float DownwardCharge = -300.0f;
         private const float ChargeCoreRadius = 32.0f;
-        private const float CollisionBuffer = 0.5f;
+        private const float CollisionBuffer = 0.1f;
         //private static readonly float JumpHeight = (JumpVelocity / 2.0f) * (JumpVelocity / Gravity);
 
         private Texture2D Image;
         public Vector2 HalfWidth;
         public Vector2 Position;
         public Vector2 Velocity;
-        public Vector2 AffectedVelocity;
         public Vector2 LastKnownGroundPosition;
         public InputFrame<PlayerKey> InputState;
 		public int PlayerIndex { get; private set; }
@@ -41,7 +40,6 @@ namespace gravitymania.player
             Position = position;
             HalfWidth = halfWidth;
             Velocity = new Vector2(0.0f, 0.0f);
-            AffectedVelocity = new Vector2(0.0f, 0.0f);
 
             Image = new Texture2D(game.Root.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             Image.SetData(new[] { Color.White });
@@ -79,18 +77,14 @@ namespace gravitymania.player
             }
         }
 
-        public AABBox GetCollisionBounds
+        public AABBox GetCollisionBounds()
         {
-            get
-            {
-                AABBox box = new AABBox();
-                box.AddBox(Bounds);
-                box.AddInternalPoint(Bounds.Min + Velocity);
-                box.AddInternalPoint(Bounds.Max + Velocity);
-                box.AddInternalPoint(Bounds.Min + HalfWidth * CollisionBuffer);
-                box.AddInternalPoint(Bounds.Max + HalfWidth * CollisionBuffer);
-                return box;
-            }
+            AABBox box = new AABBox(Bounds);
+            box.AddInternalPoint(Bounds.Min + Velocity);
+            box.AddInternalPoint(Bounds.Max + Velocity);
+            box.AddInternalPoint(Bounds.Min + HalfWidth * CollisionBuffer);
+            box.AddInternalPoint(Bounds.Max + HalfWidth * CollisionBuffer);
+            return box;
         }
 
 		public Ellipse GetCollision()
@@ -121,7 +115,7 @@ namespace gravitymania.player
                 Velocity.Y = JumpVelocity;
                 Grounded = false;
             }
-            else if (!Grounded)
+            else// if (!Grounded)
             {
                 Velocity.Y -= Gravity;
             }
@@ -137,17 +131,16 @@ namespace gravitymania.player
 
             int collisions = 0;
 
-            Vector2 remainingVelocity = Velocity;
+			float currentTime = 0.0f;
 
 			do
 			{
-				TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds);
+				TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
 
                 resolved = true;
 				bool foundAny = false;
-				float closestDelta = 0.0f;
-				CollisionResult bestResult = new CollisionResult();
-				LineSegment collidingSegment;
+				CollisionResult bestResult = new CollisionResult() { Time = 0.0f, Embedded = false };
+				LineSegment collidingSegment = new LineSegment();
 
 				foreach (TileIndex i in intersectedTiles.IterateTiles())
 				{
@@ -159,12 +152,11 @@ namespace gravitymania.player
 
                         LineSegment xformedSegment = new LineSegment(segment.Start + offset, segment.End + offset);
 
-                        if (Algebra.CollideEllipseWithLine(GetCollision(), remainingVelocity, xformedSegment, out result))
+                        if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, xformedSegment, out result))
 						{
-							if (!foundAny || (closestDelta > result.Time))
+							if (!foundAny || (bestResult.Time > result.Time && result.Time >= currentTime))
 							{
 								foundAny = true;
-								closestDelta = result.Time;
 								bestResult = result;
                                 collidingSegment = xformedSegment;
 							}
@@ -172,29 +164,38 @@ namespace gravitymania.player
 					}
 				}
 
-				// TODO: finish this, and also deal with the case of being already inside a collision plane at the start
+				// TODO: right now, its treating the 'resovled' position as still colliding.  It should not do this, perhaps add
+				// an adjacency tolerance to the calculations.
+				// Also, still very buggy on the collision, lots of getting stuck
+				// Wall friction should suck less
 				if (foundAny)
 				{
                     ++collisions;
 					resolved = false;
 
-                    if (closestDelta > 0.0f)
-                    {
-                        Position += remainingVelocity * (closestDelta - 0.1f);
-                        Grounded = true;
-                        remainingVelocity = new Vector2(0.0f, 0.0f);
-                    }
-                    else
-                    {
-                        Position += new Vector2(0.0f, 3.0f);
-                        remainingVelocity = new Vector2(0.0f, 0.0f);
-                    }
+					Position += Velocity * (bestResult.Time - currentTime);
+					currentTime = bestResult.Time;
+
+					if (bestResult.Normal.Y > 0.0f && bestResult.Normal.Y > Math.Abs(bestResult.Normal.X))
+					{
+						Grounded = true;
+					}
+
+					Vector2 resolutionPosition = bestResult.Position + (Velocity * (1.0f - currentTime));
+					Vector2 resolutionProjection = collidingSegment.GetEquation().ClosestPoint(resolutionPosition);
+
+					Velocity = (resolutionProjection - bestResult.Position) * 0.6f;
 				}
 
-                if (remainingVelocity.LengthSquared() <= 0.001f)
+				if (Velocity.LengthSquared() <= 0.001f)
                 {
                     resolved = true;
                 }
+
+				if (collisions > 1)
+				{
+					Console.WriteLine("Here");
+				}
 
                 if (collisions > 10)
                 {
@@ -204,7 +205,7 @@ namespace gravitymania.player
 			}
             while (!resolved);
 
-            Position += remainingVelocity;
+            Position += Velocity * (1.0f - currentTime);
 
             if (Bounds.Min.Y < 0.0f)
             {

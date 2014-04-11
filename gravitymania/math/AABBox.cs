@@ -11,6 +11,13 @@ namespace gravitymania.math
         public Vector2 Min { get; private set; }
         public Vector2 Max { get; private set; }
 
+		public AABBox(AABBox other)
+			: this()
+		{
+			Min = other.Min;
+			Max = other.Max;
+		}
+
         public AABBox(Vector2 min, Vector2 max)
             : this()
         {

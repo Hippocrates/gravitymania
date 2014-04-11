@@ -30,7 +30,7 @@ namespace gravitymania.math
         {
             float dist = PointDistance(p);
 
-            return (-Normal * dist) + p;
+            return (Normal * dist) + p;
         }
 
         public float PointDistance(Vector2 p)

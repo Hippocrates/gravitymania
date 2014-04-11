@@ -19,7 +19,7 @@ namespace gravitymaniatest.math
 
 
             CollisionResult result;
-            bool collided = Algebra.CollideEllipseWithPoint(ellipse, velocity, point, out result);
+            bool collided = Collide.CollideEllipseWithPoint(ellipse, velocity, point, out result);
 
             Assert.IsTrue(collided);
             Assert.That(result.Time, Is.EqualTo(0.5f).Within(0.00001f));
@@ -36,7 +36,7 @@ namespace gravitymaniatest.math
 
 
             CollisionResult result;
-            bool collided = Algebra.CollideEllipseWithLine(ellipse, velocity, line, out result);
+            bool collided = Collide.CollideEllipseWithLine(ellipse, velocity, line, out result);
 
             Assert.IsTrue(collided);
             Assert.That(result.Time, Is.EqualTo(0.5f).Within(0.00001f));
@@ -53,7 +53,7 @@ namespace gravitymaniatest.math
 
 
             CollisionResult result;
-            bool collided = Algebra.CollideEllipseWithLine(ellipse, velocity, line, out result);
+            bool collided = Collide.CollideEllipseWithLine(ellipse, velocity, line, out result);
 
             Assert.IsTrue(collided);
             Assert.That(result.Time, Is.EqualTo(0.5f).Within(0.00001f));
@@ -69,7 +69,7 @@ namespace gravitymaniatest.math
             LineSegment line = new LineSegment(new Vector2(2.0f, 0.0f), new Vector2(0.0f, 2.0f));
 
             CollisionResult result;
-            bool collided = Algebra.CollideEllipseWithLine(ellipse, velocity, line, out result);
+            bool collided = Collide.CollideEllipseWithLine(ellipse, velocity, line, out result);
 
             Assert.IsTrue(collided);
             Assert.That(result.Time, Is.EqualTo(1.0f - 1.0f / Math.Sqrt(2.0)).Within(0.00001f));
@@ -85,7 +85,7 @@ namespace gravitymaniatest.math
             LineSegment line = new LineSegment(new Vector2(3.0f, 0.0f), new Vector2(1.0f, 2.0f));
 
             CollisionResult result;
-            bool collided = Algebra.CollideEllipseWithLine(ellipse, velocity, line, out result);
+            bool collided = Collide.CollideEllipseWithLine(ellipse, velocity, line, out result);
 
             Assert.IsTrue(collided);
             Assert.That(result.Time, Is.EqualTo(0.08348483).Within(0.00001f));

@@ -27,7 +27,7 @@ namespace gravitymania.map
             Vector2 bottomLeft = new Vector2(0.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
             Vector2 topLeft = new Vector2(0.0f * TileMap.TileSize, 1.0f * TileMap.TileSize);
             Vector2 bottomRight = new Vector2(1.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
-            Vector2 topRight = new Vector2(1.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
+            Vector2 topRight = new Vector2(1.0f * TileMap.TileSize, 1.0f * TileMap.TileSize);
 
 			Geometries[(int)CollisionType.Empty] = new LineSegment[] { };
 			Geometries[(int)CollisionType.SolidBox] = new LineSegment[] 

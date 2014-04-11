@@ -10,13 +10,15 @@ namespace gravitymania.math
     {
         public float Time;
         public Vector2 Position;
+		public Vector2 Normal;
+		public bool Embedded;
     }
 
-    public static class Algebra
+    public static class Collide
     {
         public static bool CollideEllipseWithPoint(Ellipse e, Vector2 velocity, Vector2 point, out CollisionResult result)
         {
-            result = new CollisionResult() { Time = 1.0f, Position = point };
+            result = new CollisionResult() { Time = 1.0f, Position = point, Normal = e.Position - point, Embedded = false, };
 
             Vector2 xForm = e.ESpace;
             Vector2 rForm = new Vector2(1.0f / xForm.X, 1.0f / xForm.Y);
@@ -54,7 +56,7 @@ namespace gravitymania.math
 
         public static bool CollideEllipseWithLine(Ellipse e, Vector2 velocity, LineSegment line, out CollisionResult result)
         {
-            result = new CollisionResult() { Time = 1.0f, Position = e.Position };
+            result = new CollisionResult() { Time = 1.0f, Position = e.Position, Normal = new Vector2(0.0f, 0.0f), Embedded = false, };
 
             if (velocity.X == 0.0f && velocity.Y == 0.0f)
             {
@@ -77,7 +79,7 @@ namespace gravitymania.math
 
             bool embedded = false;
             float t0, t1;
-            float distAtStart = xFormedEquation.PointDistance(e.Position); // distPointToLine(circleStart, line1, lineNormal);
+			float distAtStart = xFormedEquation.PointDistance(xFormedPosition); // distPointToLine(circleStart, line1, lineNormal);
 
             if (Vector2.Dot(xFormedEquation.Normal, velocity) == 0.0f)
             {
@@ -114,6 +116,7 @@ namespace gravitymania.math
                 {
                     result.Time = t0;
                     result.Position = rForm * (finalCenter - xFormedEquation.Normal);
+					result.Normal = xFormedEquation.Normal;
                     hit = true;
                 }
             }

@@ -18,6 +18,11 @@ namespace gravitymania.game
 
     public class MainGame : GameState
     {
+		public FrameAdvanceManager FrameAdvance = new FrameAdvanceManager();
+		public RawKey FrameAdvanceKey = RawKey.Find("\\");
+		public RawKey UnPauseKey = RawKey.Find("p");
+		public bool FrameAdvanceKeyState = false;
+
         public static readonly Vector2 DefaultFieldSize = new Vector2(640.0f, 240.0f);
 
         public GameRoot Root { get; private set; }
@@ -80,21 +85,48 @@ namespace gravitymania.game
 
         public void Input(InputState state)
         {
-            for (int i = 0; i < PlayerKeys.Length; ++i)
-            {
-                for (int j = 0; j < PlayerKeys[i].Length; ++j)
-                {
-                    Players[i].InputState.SetState((PlayerKey)j, state.GetButtonState(PlayerKeys[i][j]) == ButtonState.Pressed);
-                }
-            }
+			if (state.GetButtonState(FrameAdvanceKey) == ButtonState.Pressed)
+			{
+				if (!FrameAdvanceKeyState)
+				{
+					FrameAdvanceKeyState = true;
+					FrameAdvance.FrameAdvance();
+				}
+			}
+			else
+			{
+				FrameAdvanceKeyState = false;
+			}
+
+			if (state.GetButtonState(UnPauseKey) == ButtonState.Pressed)
+			{
+				FrameAdvance.UnPause();
+			}
+
+			if (FrameAdvance.ShouldUpdateThisFrame())
+			{
+
+				for (int i = 0; i < PlayerKeys.Length; ++i)
+				{
+					for (int j = 0; j < PlayerKeys[i].Length; ++j)
+					{
+						Players[i].InputState.SetState((PlayerKey)j, state.GetButtonState(PlayerKeys[i][j]) == ButtonState.Pressed);
+					}
+				}
+			}
         }
 
         public void Update()
         {
-            for (int i = 0; i < 2; ++i)
-            {
-                Players[i].Update(this);
-            }
+			if (FrameAdvance.ShouldUpdateThisFrame())
+			{
+				for (int i = 0; i < 2; ++i)
+				{
+					Players[i].Update(this);
+				}
+
+				FrameAdvance.Update();
+			}
         }
 
         public void Draw()
