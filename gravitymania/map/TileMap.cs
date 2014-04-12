@@ -18,9 +18,74 @@ namespace gravitymania.map
 		AngleTopRight = 5,
     }
 
-	class CollisionTypeGeometry
+	public enum TileDirection
 	{
-		private static readonly LineSegment[][] Geometries = new LineSegment[Enum.GetNames(typeof(CollisionType)).Length][];
+		Up = 0x00,
+		Down = 0x01,
+		Left = 0x02,
+		Right = 0x03,
+	}
+
+	public static class TileDirectionMethods
+	{
+		private static readonly TileIndex[] Directions = new TileIndex[4]
+		{
+			new TileIndex(0, 1),
+			new TileIndex(0, -1),
+			new TileIndex(-1, 0),
+			new TileIndex(1, 0),
+		};
+
+		public static TileIndex GetOffset(this TileDirection direction)
+		{
+			return Directions[(int)direction];
+		}
+
+		public static TileDirection GetOpposite(this TileDirection direction)
+		{
+			return (TileDirection)((int)direction / 2) + (((int)direction + 1) % 2);
+		}
+
+		public static TileIndex GetOppositeOffset(this TileDirection direction)
+		{
+			return Directions[(int)direction.GetOpposite()];
+		}
+	}
+
+	public class CollisionTypeGeometry
+	{
+		private bool[] Solidity;
+		private LineSegment[] Geometry;
+		private TileDirection?[] Associations;
+
+		CollisionTypeGeometry(LineSegment[] geometry, TileDirection?[] associations, bool[] solidity)
+		{
+			Solidity = solidity.ToArray();
+			Geometry = geometry.ToArray();
+			Associations = associations.ToArray();
+		}
+
+		public int NumGeometries()
+		{
+			return Geometry.Length;
+		}
+
+		public bool SolidInDirection(TileDirection direction)
+		{
+			return Solidity[(int)direction];
+		}
+
+		public LineSegment GetGeometry(int i)
+		{
+			return Geometry[i];
+		}
+
+		public TileDirection? DirectionalAssociation(int i)
+		{
+			return Associations[i];
+		}
+
+		private static readonly CollisionTypeGeometry[] CollisionInfo = new CollisionTypeGeometry[Enum.GetNames(typeof(CollisionType)).Length];
 
 		static CollisionTypeGeometry()
 		{
@@ -29,47 +94,104 @@ namespace gravitymania.map
             Vector2 bottomRight = new Vector2(1.0f * TileMap.TileSize, 0.0f * TileMap.TileSize);
             Vector2 topRight = new Vector2(1.0f * TileMap.TileSize, 1.0f * TileMap.TileSize);
 
-			Geometries[(int)CollisionType.Empty] = new LineSegment[] { };
-			Geometries[(int)CollisionType.SolidBox] = new LineSegment[] 
-			{ 
-				new LineSegment(topLeft, topRight), 
-				new LineSegment(topRight, bottomRight),
-				new LineSegment(bottomRight, bottomLeft),
-				new LineSegment(bottomLeft, topLeft),
-			};
+			CollisionInfo[(int)CollisionType.Empty] = new CollisionTypeGeometry(new LineSegment[] { }, new TileDirection?[] { }, new bool[] { false, false, false, false });
 
-			Geometries[(int)CollisionType.AngleBottomRight] = new LineSegment[] 
-			{ 
-				new LineSegment(bottomLeft, topRight),
-				new LineSegment(topRight, bottomRight),
-				new LineSegment(bottomRight, bottomLeft),
-			};
+			CollisionInfo[(int)CollisionType.SolidBox] = new CollisionTypeGeometry(
+				new LineSegment[]
+				{ 
+					new LineSegment(topLeft, topRight),
+					new LineSegment(bottomRight, bottomLeft),
+					new LineSegment(bottomLeft, topLeft),
+					new LineSegment(topRight, bottomRight),
+				},
+				new TileDirection?[]
+				{
+					TileDirection.Up,
+					TileDirection.Down,
+					TileDirection.Left,
+					TileDirection.Right,
+				},
+				new bool[]
+				{
+					true, true, true, true,
+				});
 
-			Geometries[(int)CollisionType.AngleBottomLeft] = new LineSegment[] 
-			{ 
-				new LineSegment(topLeft, bottomRight),
-				new LineSegment(bottomRight, bottomLeft),
-				new LineSegment(bottomLeft, topLeft),
-			};
+			CollisionInfo[(int)CollisionType.AngleBottomRight] = new CollisionTypeGeometry(
+				new LineSegment[] 
+				{ 
+					new LineSegment(bottomLeft, topRight),
+					new LineSegment(topRight, bottomRight),
+					new LineSegment(bottomRight, bottomLeft),
+				},
+				new TileDirection?[]
+				{
+					null,
+					TileDirection.Right,
+					TileDirection.Down,
+				},
+				new bool[]
+				{
+					false, true, false, true,
+				});
 
-			Geometries[(int)CollisionType.AngleTopLeft] = new LineSegment[] 
-			{ 
-				new LineSegment(topRight, bottomLeft),
-				new LineSegment(bottomLeft, topLeft),
-				new LineSegment(topLeft, topRight), 
-			};
+			CollisionInfo[(int)CollisionType.AngleBottomLeft] = new CollisionTypeGeometry(
+				new LineSegment[] 
+				{ 
+					new LineSegment(topLeft, bottomRight),
+					new LineSegment(bottomRight, bottomLeft),
+					new LineSegment(bottomLeft, topLeft),
+				},
+				new TileDirection?[]
+				{
+					null,
+					TileDirection.Down,
+					TileDirection.Left,
+				},
+				new bool[]
+				{
+					false, true, true, false,
+				});
 
-			Geometries[(int)CollisionType.AngleTopRight] = new LineSegment[] 
-			{ 
-				new LineSegment(bottomRight, topLeft),
-				new LineSegment(topLeft, topRight), 
-				new LineSegment(topRight, bottomRight),
-			};
+			CollisionInfo[(int)CollisionType.AngleTopLeft] = new CollisionTypeGeometry(
+				new LineSegment[] 
+				{ 
+					new LineSegment(topRight, bottomLeft),
+					new LineSegment(bottomLeft, topLeft),
+					new LineSegment(topLeft, topRight), 
+				},
+				new TileDirection?[]
+				{
+					null,
+					TileDirection.Left,
+					TileDirection.Up,
+				},
+				new bool[]
+				{
+					true, false, true, false,
+				});
+
+			CollisionInfo[(int)CollisionType.AngleTopRight] = new CollisionTypeGeometry(
+				new LineSegment[] 
+				{ 
+					new LineSegment(bottomRight, topLeft),
+					new LineSegment(topLeft, topRight), 
+					new LineSegment(topRight, bottomRight),
+				},
+				new TileDirection?[]
+				{
+					null,
+					TileDirection.Up,
+					TileDirection.Right,
+				},
+				new bool[]
+				{
+					true, false, false, true,
+				});
 		}
 
-		public static LineSegment[] GetGeometryTemplate(CollisionType self)
+		public static CollisionTypeGeometry GetGeometryTemplate(CollisionType self)
 		{
-			return Geometries[(int)self];
+			return CollisionInfo[(int)self];
 		}
 	}
 
@@ -120,7 +242,7 @@ namespace gravitymania.map
     {
         public const int TileSize = 16;
 
-        private Tile emptyTile = new Tile() { Collision = CollisionType.Empty };
+        private Tile emptyTile = new Tile() { Collision = CollisionType.SolidBox };
 
         private Tile[] tiles;
         public int Width { get; private set; }
@@ -183,18 +305,46 @@ namespace gravitymania.map
             return new Vector2(x * TileSize, y * TileSize);
         }
 
-		// TODO: this is actually pretty wasteful, or just return the raw line segment and have the client do the affine xform?
-		// Or maybe cache this for a certain number of recently hit tiles?
-		// Whatever, this method by itself can still be used for the initial data grab, a caching system can be built on top of it.
-		public LineSegment[] GetTileGeometry(int x, int y)
+		private CollisionTypeGeometry GetTileGeometryTemplate(int x, int y)
+		{
+			return CollisionTypeGeometry.GetGeometryTemplate(GetTile(x, y).Collision);
+		}
+
+		public IEnumerable<LineSegment> GetTileGeometry(int x, int y)
 		{
 			Tile t = GetTile(x, y);
-			if (t.Collision == CollisionType.Empty)
-			{
-				return EmptyArray;
-			}
 
-			return CollisionTypeGeometry.GetGeometryTemplate(t.Collision);
+			if (t.Collision != CollisionType.Empty)
+			{
+				Vector2 offset = GetTileOffset(x, y);
+
+				CollisionTypeGeometry geometry = CollisionTypeGeometry.GetGeometryTemplate(t.Collision);
+
+				// This removes 'unncessary' lines when adjacent to solid tiles, saves time, and removes some collision artifacts
+				for (int i = 0; i < geometry.NumGeometries(); ++i)
+				{
+					TileDirection? direction = geometry.DirectionalAssociation(i);
+
+					bool solidAdjacent = false;
+
+					if (direction != null)
+					{
+						TileDirection d = direction ?? TileDirection.Up;
+						TileIndex idx = d.GetOffset();
+						solidAdjacent = GetTileGeometryTemplate(x + idx.X, y + idx.Y).SolidInDirection(d.GetOpposite());
+					}
+
+					if (!solidAdjacent)
+					{
+						LineSegment segment = geometry.GetGeometry(i);
+						yield return new LineSegment(segment.Start + offset, segment.End + offset);
+					}
+					else
+					{
+						//Console.WriteLine("Look at the savings!");
+					}
+				}
+			}
 		}
     }
 
@@ -203,35 +353,43 @@ namespace gravitymania.map
         public static TileMap[] LoadFromStupidText()
         {
             string file1Data =
-                "0000000000000000000000000" + 
-                "0000000000000000000000000" + 
-                "0000000000000000000000000" + 
-                "0000000000000000000000000" + 
-                "0000000000000000000000000" + 
-                "0000000000000000000000000" + 
-                "0000000000000000011000000" + 
-                "0000000000000000011000000" + 
-                "0000000000000001111000000" + 
-                "0000000000000001111000000" + 
-                "1111111111000111111111111" + 
-                "1111111111000111111111111" + 
-                "1111111111000111111111111";
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000111" +
+				"000000000000000000000000000511" +
+				"000000000000000000000000000051" +
+				"000000000000000001100000000005" +
+				"000000000000000001100000000000" +
+				"000000000000000111110000000211" + 
+                "000000000000000111110000002111" + 
+                "111111111100011111113000021111" + 
+                "111111111100011111111300211111" + 
+                "111111111100011111111111111111";
             string file2Data =
-                "0000000000000000000000000" +
-                "0000000000000000000000000" +
-                "0000000000000000000000000" +
-                "0000000000000000000000000" +
-                "0000000000000000000110000" +
-                "0000000000000000000110000" +
-                "0000000000000000000110000" +
-                "0000000000000000000110000" +
-                "0000000000000000000110000" +
-                "0000000000000000000110000" +
-                "1111111111000111111111111" +
-                "1111111111000111111111111" +
-                "1111111111000111111111111";
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+				"000000000000000000000000000000" +
+                "000000000000000000000000000000" +
+                "000000000000000000000000000000" +
+                "000000011110000000011000000000" +
+				"000000011110000000011000000000" +
+				"000000011110000000011000000000" +
+				"000000000000000000011000000000" +
+				"000000000000000000011100000000" +
+				"000000000000000000011100000000" +
+				"000000000000000000011110000000" +
+				"000000000000000000011110000000" +
+                "111111111100011111111111130000" +
+                "111111111100011111111111113000" +
+                "111111111100011111111111111300";
 
-            int width = 25;
+            int width = 30;
             int height = file1Data.Length / width;
 
             return new TileMap[] { LoadFromText(file1Data, width, height), LoadFromText(file2Data, width, height) };

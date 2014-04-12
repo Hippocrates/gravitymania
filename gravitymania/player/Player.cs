@@ -33,6 +33,8 @@ namespace gravitymania.player
         public float GravityCharge;
 
         public bool Grounded;
+		public bool LeftWall;
+		public bool RightWall;
 
         public Player(MainGame game, int playerIndex, Vector2 position, Vector2 halfWidth)
         {
@@ -110,12 +112,24 @@ namespace gravitymania.player
                 Velocity.X = 0.0f;
             }
 
+			if (LeftWall && InputState.IsDown(PlayerKey.JUMP))
+			{
+				Velocity = new Vector2(0.0f, JumpVelocity);
+				Grounded = false;
+			}
+
+			if (RightWall && InputState.IsDown(PlayerKey.JUMP))
+			{
+				Velocity = new Vector2(0.0f, JumpVelocity);
+				Grounded = false;
+			}
+
             if (Grounded && InputState.IsDown(PlayerKey.JUMP))
             {
                 Velocity.Y = JumpVelocity;
-                Grounded = false;
+				Grounded = false;
             }
-            else// if (!Grounded)
+            else
             {
                 Velocity.Y -= Gravity;
             }
@@ -132,6 +146,10 @@ namespace gravitymania.player
             int collisions = 0;
 
 			float currentTime = 0.0f;
+
+			Grounded = false;
+			LeftWall = false;
+			RightWall = false;
 
 			do
 			{
@@ -150,15 +168,13 @@ namespace gravitymania.player
 					{
 						CollisionResult result;
 
-                        LineSegment xformedSegment = new LineSegment(segment.Start + offset, segment.End + offset);
-
-                        if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, xformedSegment, out result))
+						if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, segment, out result))
 						{
 							if (!foundAny || (bestResult.Time > result.Time && result.Time >= currentTime))
 							{
 								foundAny = true;
 								bestResult = result;
-                                collidingSegment = xformedSegment;
+								collidingSegment = segment;
 							}
 						}
 					}
@@ -166,8 +182,9 @@ namespace gravitymania.player
 
 				// TODO: right now, its treating the 'resovled' position as still colliding.  It should not do this, perhaps add
 				// an adjacency tolerance to the calculations.
-				// Also, still very buggy on the collision, lots of getting stuck
-				// Wall friction should suck less
+				// Still quite buggy, in particular, gets stuck on corners a lot
+				// Wall friction should suck less:
+				// -> In particular, wall friction should not be used unless you are falling down
 				if (foundAny)
 				{
                     ++collisions;
@@ -176,15 +193,38 @@ namespace gravitymania.player
 					Position += Velocity * (bestResult.Time - currentTime);
 					currentTime = bestResult.Time;
 
-					if (bestResult.Normal.Y > 0.0f && bestResult.Normal.Y > Math.Abs(bestResult.Normal.X))
+					if (bestResult.Normal.Y > 0.0f && bestResult.Normal.Y >= Math.Abs(bestResult.Normal.X))
 					{
 						Grounded = true;
+					}
+					else if (bestResult.Normal.Y == 0.0f)
+					{
+						if (bestResult.Normal.X > 0.0f)
+						{
+							LeftWall = true;
+						}
+						else
+						{
+							RightWall = true;
+						}
 					}
 
 					Vector2 resolutionPosition = bestResult.Position + (Velocity * (1.0f - currentTime));
 					Vector2 resolutionProjection = collidingSegment.GetEquation().ClosestPoint(resolutionPosition);
 
-					Velocity = (resolutionProjection - bestResult.Position) * 0.6f;
+					// This is to prevent 'clinging' to walls while rising, as it is very annoying
+					if (bestResult.Normal.Y == 0.0f && Velocity.Y > 0.0f)
+					{
+						if (Velocity.Y > 0.0f)
+						{
+							Velocity.X = 0.0f;
+						}
+					}
+					// Otherwise, apply friction
+					else
+					{
+						Velocity = (resolutionProjection - bestResult.Position) * 0.8f;
+					}
 				}
 
 				if (Velocity.LengthSquared() <= 0.001f)
@@ -192,18 +232,18 @@ namespace gravitymania.player
                     resolved = true;
                 }
 
-				if (collisions > 1)
-				{
-					Console.WriteLine("Here");
-				}
-
                 if (collisions > 10)
                 {
+					Velocity = new Vector2(0.0f, 0.0f);
+					Console.WriteLine("Yikes!");
                     break;
                 }
 
 			}
             while (!resolved);
+
+			// We should do the grounded/wall state as a seperate resolution step
+			// In particular, it should detect closeness to a wall without having to be pushing into it
 
             Position += Velocity * (1.0f - currentTime);
 
@@ -216,6 +256,8 @@ namespace gravitymania.player
 
             if (Grounded)
             {
+				LeftWall = false;
+				RightWall = false;
                 LastKnownGroundPosition = Position - new Vector2(0.0f, HalfWidth.Y);
             }
         }
