@@ -6,20 +6,31 @@ using Microsoft.Xna.Framework;
 
 namespace gravitymania.math
 {
+    public enum CollisionObject
+    {
+        None = 0,
+        Line,
+        Ellipse,
+        Point,
+    }
+
     public struct CollisionResult
     {
+        public CollisionObject Type;
         public float Time;
         public Vector2 Position;
 		public Vector2 Normal;
-		public bool Embedded;
+        public bool StartsInside;
+        public float PenetrationDistance;
     }
 
     public static class Collide
     {
         public static bool CollideEllipseWithPoint(Ellipse e, Vector2 velocity, Vector2 point, out CollisionResult result)
         {
-            result = new CollisionResult() { Time = 1.0f, Position = point, Normal = e.Position - point, Embedded = false, };
-
+            result = new CollisionResult() { Time = 1.0f, Position = point, Normal = e.Position - point, StartsInside = false, Type = CollisionObject.None };
+            result.Normal.Normalize();
+            
             Vector2 xForm = e.ESpace;
             Vector2 rForm = new Vector2(1.0f / xForm.X, 1.0f / xForm.Y);
 
@@ -43,20 +54,31 @@ namespace gravitymania.math
 
 	        if (t0 >= 0.0f && t0 <= 1.0f) {
 		        result.Time = t0;
+                result.Type = CollisionObject.Point;
 		        return true;
 	        }
 
 	        if (t1 >= 0.0f && t1 <= 1.0f) {
                 result.Time = t1;
+                result.Type = CollisionObject.Point;
 		        return true;
 	        }
 
+            /*
+            if (f.Length() < 1.0f)
+            {
+                result.StartsInside = true;
+                result.Time = 0.0f;
+                result.PenetrationDistance = (rForm * ((1.0f - f.Length()) * f)).Length();
+                return true;
+            }*/
+            
 	        return false;
         }
 
         public static bool CollideEllipseWithLine(Ellipse e, Vector2 velocity, LineSegment line, out CollisionResult result)
         {
-            result = new CollisionResult() { Time = 1.0f, Position = e.Position, Normal = new Vector2(0.0f, 0.0f), Embedded = false, };
+            result = new CollisionResult() { Time = 1.0f, Position = e.Position, Normal = line.LeftHandNormal(), StartsInside = false, };
 
             if (velocity.X == 0.0f && velocity.Y == 0.0f)
             {
@@ -71,15 +93,16 @@ namespace gravitymania.math
             LineSegment xFormedLine = new LineSegment(xForm * line.Start, xForm * line.End);
 
             LineEquation xFormedEquation = xFormedLine.GetEquation();
-
+            
             if (Vector2.Dot(velocity, xFormedEquation.Normal) > 0.0f)
             {
                 return false;
             }
 
-            bool embedded = false;
             float t0, t1;
-			float distAtStart = xFormedEquation.PointDistance(xFormedPosition); // distPointToLine(circleStart, line1, lineNormal);
+			float distAtStart = xFormedEquation.MultiplyThrough(xFormedPosition); // distPointToLine(circleStart, line1, lineNormal);
+
+            bool embedded = false;
 
             if (Vector2.Dot(xFormedEquation.Normal, velocity) == 0.0f)
             {
@@ -116,7 +139,9 @@ namespace gravitymania.math
                 {
                     result.Time = t0;
                     result.Position = rForm * (finalCenter - xFormedEquation.Normal);
-					result.Normal = xFormedEquation.Normal;
+					result.Normal = (rForm * xFormedEquation.Normal);
+                    result.Normal.Normalize();
+                    result.Type = CollisionObject.Line;
                     hit = true;
                 }
             }
@@ -128,17 +153,29 @@ namespace gravitymania.math
                 if (CollideEllipseWithPoint(e, velocity, line.Start, out result1))
                 {
                     result = result1;
-                    hit = true;
+                    return true;
                 }
                 if (CollideEllipseWithPoint(e, velocity, line.End, out result2))
                 {
                     if (result2.Time <= result.Time)
                     {
                         result = result2;
-                        hit = true;
+                        return true;
                     }
                 }
             }
+
+            /*
+            if (distAtStart >= 0.0f && distAtStart < 1.0f)
+            {
+                result.Time = 0.0f;
+                result.StartsInside = true;
+                result.Normal = rForm * xFormedEquation.Normal;
+                result.Normal.Normalize();
+                result.Position = rForm * xFormedEquation.ClosestPoint(xFormedPosition);
+                result.PenetrationDistance = 1.0f - distAtStart;
+                return true;
+            }*/
 
             return hit;
         }

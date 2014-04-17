@@ -13,6 +13,14 @@ namespace gravitymania.math
         public float C;
         public Vector2 Normal;
 
+        public LineEquation(Vector2 point, Vector2 normal)
+        {
+            Normal = normal;
+            normal.Normalize();
+            C = 0.0f;
+            C = -MultiplyThrough(point);
+        }
+
         public LineEquation(float a, float b, float c)
         {
             Normal = new Vector2(a, b);

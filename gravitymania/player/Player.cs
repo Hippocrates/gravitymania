@@ -157,7 +157,7 @@ namespace gravitymania.player
 
                 resolved = true;
 				bool foundAny = false;
-				CollisionResult bestResult = new CollisionResult() { Time = 0.0f, Embedded = false };
+				CollisionResult bestResult = new CollisionResult() { Time = 0.0f, StartsInside = false };
 				LineSegment collidingSegment = new LineSegment();
 
 				foreach (TileIndex i in intersectedTiles.IterateTiles())
@@ -190,48 +190,76 @@ namespace gravitymania.player
                     ++collisions;
 					resolved = false;
 
-					Position += Velocity * (bestResult.Time - currentTime);
-					currentTime = bestResult.Time;
+                    if (bestResult.StartsInside)
+                    {
+                        Position += bestResult.Normal * (bestResult.PenetrationDistance + 0.0001f);
+                        Velocity = new Vector2(0.0f, 0.0f);
+                    }
+                    else
+                    {
+                        Vector2 distanceToHit = Velocity * (bestResult.Time - currentTime);
+                        float realDistanceToHit = distanceToHit.Length();
 
-					if (bestResult.Normal.Y > 0.0f && bestResult.Normal.Y >= Math.Abs(bestResult.Normal.X))
-					{
-						Grounded = true;
-					}
-					else if (bestResult.Normal.Y == 0.0f)
-					{
-						if (bestResult.Normal.X > 0.0f)
-						{
-							LeftWall = true;
-						}
-						else
-						{
-							RightWall = true;
-						}
-					}
+                        if (realDistanceToHit > 0.00001f)
+                        {
+                            Vector2 dirV = distanceToHit;
+                            dirV.Normalize();
+                            Vector2 changeInPosition = dirV * (realDistanceToHit - 0.00001f);
+                            Position += changeInPosition;
+                            bestResult.Position -= dirV * 0.00001f;
+                        }
+                        
+                        currentTime = bestResult.Time;
 
-					Vector2 resolutionPosition = bestResult.Position + (Velocity * (1.0f - currentTime));
-					Vector2 resolutionProjection = collidingSegment.GetEquation().ClosestPoint(resolutionPosition);
+                        if (bestResult.Normal.Y > 0.0f && bestResult.Normal.Y >= Math.Abs(bestResult.Normal.X))
+                        {
+                            Grounded = true;
 
-					// This is to prevent 'clinging' to walls while rising, as it is very annoying
-					if (bestResult.Normal.Y == 0.0f && Velocity.Y > 0.0f)
-					{
-						if (Velocity.Y > 0.0f)
-						{
-							Velocity.X = 0.0f;
-						}
-					}
-					// Otherwise, apply friction
-					else
-					{
-						Velocity = (resolutionProjection - bestResult.Position) * 0.8f;
-					}
+                            if (PlayerIndex == 0)
+                            {
+                                Console.WriteLine("HerE");
+                            }
+                        }
+                        else if (bestResult.Normal.Y == 0.0f)
+                        {
+                            if (bestResult.Normal.X > 0.0f)
+                            {
+                                LeftWall = true;
+                            }
+                            else
+                            {
+                                 RightWall = true;
+                            }
+                        }
+
+                        Vector2 resolutionPosition = bestResult.Position + (Velocity * (1.0f - currentTime));
+                        LineEquation collidingEquation = new LineEquation(bestResult.Position, bestResult.Normal);
+
+                        
+
+                        Vector2 resolutionProjection = collidingEquation.ClosestPoint(resolutionPosition);
+
+                        // This is to prevent 'clinging' to walls while rising, as it is very annoying
+                        if (bestResult.Normal.Y == 0.0f && Velocity.Y > 0.0f)
+                        {
+                            if (Velocity.Y > 0.0f)
+                            {
+                                Velocity.X = 0.0f;
+                            }
+                        }
+                        // Otherwise, apply friction
+                        else
+                        {
+                            Velocity = (resolutionProjection - bestResult.Position) * 0.8f;
+                        }
+                    }
 				}
 
 				if (Velocity.LengthSquared() <= 0.001f)
                 {
                     resolved = true;
                 }
-
+                
                 if (collisions > 10)
                 {
 					Velocity = new Vector2(0.0f, 0.0f);

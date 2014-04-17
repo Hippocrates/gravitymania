@@ -37,8 +37,10 @@ namespace gravitymania.game
 
         public RawKey[][] PlayerKeys = new RawKey[2][]
         {
-            new RawKey[] { RawKey.Find("a"), RawKey.Find("d"), RawKey.Find("w") },
-            new RawKey[] { RawKey.Find("LEFT"), RawKey.Find("RIGHT"), RawKey.Find("UP") },
+            new RawKey[] { new X360PadKey(PlayerIndex.One, Buttons.DPadLeft), new X360PadKey(PlayerIndex.One, Buttons.DPadRight), new X360PadKey(PlayerIndex.One, Buttons.A), },
+            new RawKey[] { new X360PadKey(PlayerIndex.Two, Buttons.DPadLeft), new X360PadKey(PlayerIndex.Two, Buttons.DPadRight), new X360PadKey(PlayerIndex.Two, Buttons.A), },
+            //new RawKey[] { RawKey.Find("a"), RawKey.Find("d"), RawKey.Find("w") },
+            //new RawKey[] { RawKey.Find("LEFT"), RawKey.Find("RIGHT"), RawKey.Find("UP") },
         };
 
         public readonly int TileSize = 16;
