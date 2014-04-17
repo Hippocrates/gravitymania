@@ -50,6 +50,10 @@ namespace gravitymania.player
 
             Grounded = true;
             GravityCharge = 0.0f;
+
+
+            Position = new Vector2(443.1862f, 121.5f);
+            Velocity = new Vector2(5.0f, 10.0f);
         }
 
         public float BasicChargeAmount
@@ -106,6 +110,11 @@ namespace gravitymania.player
                 {
                     Velocity.X = 5.0f;
                 }
+
+                if (Math.Abs(Velocity.X) > 5.0f)
+                {
+                    //Velocity.X = Math.Sign(Velocity.X) * 5.0f;
+                }
             }
             else
             {
@@ -152,11 +161,11 @@ namespace gravitymania.player
             Vector2 initialPosition = Position;
             Vector2 destination = Position + Velocity;
             Vector2 initialDesitination = destination;
-            LineEquation firstPlane;
+            LineEquation firstPlane = new LineEquation();
 
             CollisionResult result;
 
-            // TODO: This works, aside from top slopes
+            // TODO: This still doesn't work very well
             for (int i = 0; i < 2; ++i)
             {
                 result = GetFirstCollision(game);
@@ -168,20 +177,21 @@ namespace gravitymania.player
                 }
 
                 float distance = Velocity.Length() * result.Time;
-                float shortDist = Math.Max(distance - 0.0001f, 0.0f);
+                float shortDist = Math.Max(distance - 0.00001f, 0.0f);
 
                 Position += Velocity.GetNormal() * shortDist;
 
                 if (i == 0)
                 {
                     Vector2 eRad = result.Normal * HalfWidth;
-                    float longRadius = eRad.Length() + 0.0001f;
+                    float longRadius = eRad.Length() + 0.00001f;
                     firstPlane = new LineEquation(result.Position, result.Normal);
                     destination -= (firstPlane.PointDistance(destination) - longRadius) * firstPlane.Normal;
                     Velocity = destination - Position;
 
-                    if (PlayerIndex == 0)
+                    if (PlayerIndex == 0 && firstPlane.Normal.X <= -0.7 && firstPlane.Normal.Y <= -0.7)
                     {
+                        
                     }
                 }
 
@@ -191,10 +201,16 @@ namespace gravitymania.player
 
                     if (PlayerIndex == 0)
                     {
+                        if (firstPlane.Normal.X <= -0.7 && firstPlane.Normal.Y <= -0.7)
+                        {
+
+                        }
                     }
 
                 }
             }
+
+            Velocity = Position - initialPosition;
 
             if (Bounds.Min.Y < 0.0f)
             {
@@ -227,13 +243,15 @@ namespace gravitymania.player
             drawer.Draw(Image, box, Color.BlanchedAlmond);
         }
 
+        public int lastX;
+        public int lastY;
+
         public CollisionResult GetFirstCollision(MainGame game)
         {
             TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
 
             bool foundAny = false;
             CollisionResult bestResult = new CollisionResult() { Time = 0.0f, Hit = false, };
-            LineSegment collidingSegment = new LineSegment();
 
             foreach (TileIndex i in intersectedTiles.IterateTiles())
             {
@@ -245,11 +263,14 @@ namespace gravitymania.player
 
                     if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, segment, out result))
                     {
-                        if (!foundAny || (bestResult.Time > result.Time && result.Time >= 0.0f))
+                        if (!foundAny || (result.Hit && bestResult.Time > result.Time && result.Time >= 0.0f))
                         {
-                            foundAny = true;
+                            if (PlayerIndex == 0)
+                            {
+                            }
                             bestResult = result;
-                            collidingSegment = segment;
+                            lastX = i.X;
+                            lastY = i.Y;
                         }
                     }
                 }
