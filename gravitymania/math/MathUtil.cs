@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Xna.Framework;
 
 namespace gravitymania.math
 {
@@ -21,6 +22,13 @@ namespace gravitymania.math
             {
                 return val;
             }
+        }
+
+        public static Vector2 GetNormal(this Vector2 self)
+        {
+            Vector2 result = self;
+            result.Normalize();
+            return result;
         }
     }
 }

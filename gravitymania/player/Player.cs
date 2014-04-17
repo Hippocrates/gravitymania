@@ -141,139 +141,60 @@ namespace gravitymania.player
 
             Velocity += ((BasicChargeAmount * other.BasicChargeAmount) / (vlen * vlen * vlen)) * new Vector2(0.0f, -Math.Abs(other.Velocity.Y));
 
-			bool resolved = true;
-
-            int collisions = 0;
-
-			float currentTime = 0.0f;
-
-			Grounded = false;
-			LeftWall = false;
-			RightWall = false;
-
-			do
-			{
-				TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
-
-                resolved = true;
-				bool foundAny = false;
-				CollisionResult bestResult = new CollisionResult() { Time = 0.0f, StartsInside = false };
-				LineSegment collidingSegment = new LineSegment();
-
-				foreach (TileIndex i in intersectedTiles.IterateTiles())
-				{
-                    Vector2 offset = game.Maps[PlayerIndex].GetTileOffset(i.X, i.Y);
-
-					foreach (LineSegment segment in game.Maps[PlayerIndex].GetTileGeometry(i.X, i.Y))
-					{
-						CollisionResult result;
-
-						if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, segment, out result))
-						{
-							if (!foundAny || (bestResult.Time > result.Time && result.Time >= currentTime))
-							{
-								foundAny = true;
-								bestResult = result;
-								collidingSegment = segment;
-							}
-						}
-					}
-				}
-
-				// TODO: right now, its treating the 'resovled' position as still colliding.  It should not do this, perhaps add
-				// an adjacency tolerance to the calculations.
-				// Still quite buggy, in particular, gets stuck on corners a lot
-				// Wall friction should suck less:
-				// -> In particular, wall friction should not be used unless you are falling down
-				if (foundAny)
-				{
-                    ++collisions;
-					resolved = false;
-
-                    if (bestResult.StartsInside)
-                    {
-                        Position += bestResult.Normal * (bestResult.PenetrationDistance + 0.0001f);
-                        Velocity = new Vector2(0.0f, 0.0f);
-                    }
-                    else
-                    {
-                        Vector2 distanceToHit = Velocity * (bestResult.Time - currentTime);
-                        float realDistanceToHit = distanceToHit.Length();
-
-                        if (realDistanceToHit > 0.00001f)
-                        {
-                            Vector2 dirV = distanceToHit;
-                            dirV.Normalize();
-                            Vector2 changeInPosition = dirV * (realDistanceToHit - 0.00001f);
-                            Position += changeInPosition;
-                            bestResult.Position -= dirV * 0.00001f;
-                        }
-                        
-                        currentTime = bestResult.Time;
-
-                        if (bestResult.Normal.Y > 0.0f && bestResult.Normal.Y >= Math.Abs(bestResult.Normal.X))
-                        {
-                            Grounded = true;
-
-                            if (PlayerIndex == 0)
-                            {
-                                Console.WriteLine("HerE");
-                            }
-                        }
-                        else if (bestResult.Normal.Y == 0.0f)
-                        {
-                            if (bestResult.Normal.X > 0.0f)
-                            {
-                                LeftWall = true;
-                            }
-                            else
-                            {
-                                 RightWall = true;
-                            }
-                        }
-
-                        Vector2 resolutionPosition = bestResult.Position + (Velocity * (1.0f - currentTime));
-                        LineEquation collidingEquation = new LineEquation(bestResult.Position, bestResult.Normal);
-
-                        
-
-                        Vector2 resolutionProjection = collidingEquation.ClosestPoint(resolutionPosition);
-
-                        // This is to prevent 'clinging' to walls while rising, as it is very annoying
-                        if (bestResult.Normal.Y == 0.0f && Velocity.Y > 0.0f)
-                        {
-                            if (Velocity.Y > 0.0f)
-                            {
-                                Velocity.X = 0.0f;
-                            }
-                        }
-                        // Otherwise, apply friction
-                        else
-                        {
-                            Velocity = (resolutionProjection - bestResult.Position) * 0.8f;
-                        }
-                    }
-				}
-
-				if (Velocity.LengthSquared() <= 0.001f)
-                {
-                    resolved = true;
-                }
-                
-                if (collisions > 10)
-                {
-					Velocity = new Vector2(0.0f, 0.0f);
-					Console.WriteLine("Yikes!");
-                    break;
-                }
-
-			}
-            while (!resolved);
+            Grounded = false;
+            LeftWall = false;
+            RightWall = false;
 
 			// We should do the grounded/wall state as a seperate resolution step
 			// In particular, it should detect closeness to a wall without having to be pushing into it
 
-            Position += Velocity * (1.0f - currentTime);
+            Vector2 initialVelocity = Velocity;
+            Vector2 initialPosition = Position;
+            Vector2 destination = Position + Velocity;
+            Vector2 initialDesitination = destination;
+            LineEquation firstPlane;
+
+            CollisionResult result;
+
+            // TODO: This works, aside from top slopes
+            for (int i = 0; i < 2; ++i)
+            {
+                result = GetFirstCollision(game);
+
+                if (!result.Hit)
+                {
+                    Position = destination;
+                    break;
+                }
+
+                float distance = Velocity.Length() * result.Time;
+                float shortDist = Math.Max(distance - 0.0001f, 0.0f);
+
+                Position += Velocity.GetNormal() * shortDist;
+
+                if (i == 0)
+                {
+                    Vector2 eRad = result.Normal * HalfWidth;
+                    float longRadius = eRad.Length() + 0.0001f;
+                    firstPlane = new LineEquation(result.Position, result.Normal);
+                    destination -= (firstPlane.PointDistance(destination) - longRadius) * firstPlane.Normal;
+                    Velocity = destination - Position;
+
+                    if (PlayerIndex == 0)
+                    {
+                    }
+                }
+
+                if (Vector2.Dot(result.Normal, new Vector2(0.0f, 1.0f)) > 0.7f)
+                {
+                    Grounded = true;
+
+                    if (PlayerIndex == 0)
+                    {
+                    }
+
+                }
+            }
 
             if (Bounds.Min.Y < 0.0f)
             {
@@ -305,5 +226,37 @@ namespace gravitymania.player
             Rectangle box = camera.TransformToView(Bounds);
             drawer.Draw(Image, box, Color.BlanchedAlmond);
         }
+
+        public CollisionResult GetFirstCollision(MainGame game)
+        {
+            TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
+
+            bool foundAny = false;
+            CollisionResult bestResult = new CollisionResult() { Time = 0.0f, Hit = false, };
+            LineSegment collidingSegment = new LineSegment();
+
+            foreach (TileIndex i in intersectedTiles.IterateTiles())
+            {
+                Vector2 offset = game.Maps[PlayerIndex].GetTileOffset(i.X, i.Y);
+
+                foreach (LineSegment segment in game.Maps[PlayerIndex].GetTileGeometry(i.X, i.Y))
+                {
+                    CollisionResult result;
+
+                    if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, segment, out result))
+                    {
+                        if (!foundAny || (bestResult.Time > result.Time && result.Time >= 0.0f))
+                        {
+                            foundAny = true;
+                            bestResult = result;
+                            collidingSegment = segment;
+                        }
+                    }
+                }
+            }
+
+            return bestResult;
+        }
+        
     }
 }
