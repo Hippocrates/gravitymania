@@ -55,12 +55,14 @@ namespace gravitymania.math
 	        if (t0 >= 0.0f && t0 <= 1.0f) {
 		        result.Time = t0;
                 result.Type = CollisionObject.Point;
+                result.Hit = true;
 		        return true;
 	        }
 
 	        if (t1 >= 0.0f && t1 <= 1.0f) {
                 result.Time = t1;
                 result.Type = CollisionObject.Point;
+                result.Hit = true;
 		        return true;
 	        }
 
@@ -137,8 +139,9 @@ namespace gravitymania.math
 
             if (!hit)
             {
+                
                 CollisionResult result1, result2;
-
+                
                 if (CollideEllipseWithPoint(e, velocity, line.Start, out result1))
                 {
                     result = result1;
@@ -152,6 +155,7 @@ namespace gravitymania.math
                         hit = true;
                     }
                 }
+                 
             }
 
             result.Hit = hit;

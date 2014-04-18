@@ -11,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using gravitymania.math;
 using gravitymania.player;
 using Microsoft.Xna.Framework.Input;
+using gravitymania.graphics;
 
 namespace gravitymania.game
 {
@@ -28,6 +29,7 @@ namespace gravitymania.game
         public GameRoot Root { get; private set; }
 
         private SpriteBatch Drawer;
+        private PrimitiveBatch PrimitivesDrawer;
         private Texture2D onePixelTexture;
 
         // GameData
@@ -61,6 +63,8 @@ namespace gravitymania.game
             Maps = TileMapLoader.LoadFromStupidText();
 
             Drawer = new SpriteBatch(Root.Graphics.Device);
+
+            PrimitivesDrawer = new PrimitiveBatch(Root.Graphics.Device);
 
             onePixelTexture = new Texture2D(Root.Graphics.Device, 1, 1, false, SurfaceFormat.Color);
             onePixelTexture.SetData(new[] { Color.White });
@@ -157,7 +161,39 @@ namespace gravitymania.game
             for (int i = 0; i < 2; ++i)
             {
                 Players[i].Render(Drawer, Cameras[i]);
+
+                PrimitivesDrawer.Begin(Cameras[i].CreateOrthographicProjection(), Cameras[i].WorldToViewport * Matrix.CreateTranslation(Cameras[i].DrawOffset.X, Cameras[i].DrawOffset.Y, 0.0f));
+                
+                Color[] colors = new Color[] { Color.FloralWhite, Color.Aquamarine, Color.LightGreen };
+
+                for (int j = 0; j < Players[i].collisionInfoThisFrame.Count; ++j)
+                {
+                    CollisionResult c = Players[i].collisionInfoThisFrame[j];
+                    Vector2 lineDir = c.Normal.GetLeftNorm();
+                    LineSegment segment = new LineSegment(c.Position + (lineDir * 8.0f), c.Position - (lineDir * 8.0f));
+
+                    Color color;
+
+                    if (j > colors.Length)
+                    {
+                        color = Color.Black;
+                    }
+                    else
+                    {
+                        color = colors[j];
+                    }
+
+                    PrimitivesDrawer.DrawSegment(segment.Start, segment.End, color);
+
+                    PrimitivesDrawer.DrawPoint(c.Position, 2.0f, Color.FloralWhite);
+
+                   
+                }
+
+                PrimitivesDrawer.End();
             }
+
+
 
             Drawer.Draw(onePixelTexture, new Rectangle(0, 236, 640, 8), Color.RosyBrown);
 

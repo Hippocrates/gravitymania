@@ -36,6 +36,8 @@ namespace gravitymania.player
 		public bool LeftWall;
 		public bool RightWall;
 
+        public List<CollisionResult> collisionInfoThisFrame = new List<CollisionResult>();
+
         public Player(MainGame game, int playerIndex, Vector2 position, Vector2 halfWidth)
         {
 			PlayerIndex = playerIndex;
@@ -165,7 +167,11 @@ namespace gravitymania.player
 
             CollisionResult result;
 
+            collisionInfoThisFrame.Clear();
+
             // TODO: This still doesn't work very well
+            // The problem seems to be points: the ellipse is 'bumping' over them on flat surfaces, or 
+            // otherwise colliding with them _sooner_ than it would with lines
             for (int i = 0; i < 2; ++i)
             {
                 result = GetFirstCollision(game);
@@ -176,6 +182,8 @@ namespace gravitymania.player
                     break;
                 }
 
+                collisionInfoThisFrame.Add(result);
+
                 float distance = Velocity.Length() * result.Time;
                 float shortDist = Math.Max(distance - 0.00001f, 0.0f);
 
@@ -184,33 +192,17 @@ namespace gravitymania.player
                 if (i == 0)
                 {
                     Vector2 eRad = result.Normal * HalfWidth;
-                    float longRadius = eRad.Length() + 0.00001f;
+                    float longRadius = eRad.Length() + 0.0001f;
                     firstPlane = new LineEquation(result.Position, result.Normal);
                     destination -= (firstPlane.PointDistance(destination) - longRadius) * firstPlane.Normal;
                     Velocity = destination - Position;
-
-                    if (PlayerIndex == 0 && firstPlane.Normal.X <= -0.7 && firstPlane.Normal.Y <= -0.7)
-                    {
-                        
-                    }
                 }
 
                 if (Vector2.Dot(result.Normal, new Vector2(0.0f, 1.0f)) > 0.7f)
                 {
                     Grounded = true;
-
-                    if (PlayerIndex == 0)
-                    {
-                        if (firstPlane.Normal.X <= -0.7 && firstPlane.Normal.Y <= -0.7)
-                        {
-
-                        }
-                    }
-
                 }
             }
-
-            Velocity = Position - initialPosition;
 
             if (Bounds.Min.Y < 0.0f)
             {

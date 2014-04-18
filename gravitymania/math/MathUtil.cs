@@ -30,5 +30,15 @@ namespace gravitymania.math
             result.Normalize();
             return result;
         }
+
+        public static Vector2 GetLeftNorm(this Vector2 self)
+        {
+            return new Vector2(-self.Y, self.X);
+        }
+
+        public static Vector2 GetRightNorm(this Vector2 self)
+        {
+            return new Vector2(self.Y, -self.X);
+        }
     }
 }
