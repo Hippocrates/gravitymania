@@ -163,11 +163,13 @@ namespace gravitymania
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
+			Graphics.Device.RasterizerState = RasterizerState.CullNone;
+
             // Ensure the camera is reporting the correct viewport size
             //camera.ViewportSize = new Vector2(Graphics.Device.Viewport.Width, Graphics.Device.Viewport.Height);
 
 			// This should be moved into the 'game speficic' area, and the console should probably be responsible for creating its own sprite batch
-            Graphics.ClearScreen(Color.Wheat);
+            Graphics.ClearScreen(Color.Black);
 
             if (CurrentState != null)
             {

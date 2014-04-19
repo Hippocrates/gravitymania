@@ -38,8 +38,8 @@ namespace gravitymania.graphics
             Graphics.ApplyChanges();
         }
 
-        private const uint DefaultScreenWidth = 640;
-        private const uint DefaultScreenHeight = 480;
+        private const uint DefaultScreenWidth = 1024;
+        private const uint DefaultScreenHeight = 768;
         private const bool DefaultIsFullscreen = false;
     }
 }

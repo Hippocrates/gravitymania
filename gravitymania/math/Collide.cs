@@ -27,7 +27,7 @@ namespace gravitymania.math
     {
         public static bool CollideEllipseWithPoint(Ellipse e, Vector2 velocity, Vector2 point, out CollisionResult result)
         {
-            result = new CollisionResult() { Time = 1.0f, Position = point, Normal = e.Position - point, Hit = false, Type = CollisionObject.None };
+            result = new CollisionResult() { Time = 1.0f, Position = point, Hit = false, Type = CollisionObject.None };
 
             result.Normal.Normalize();
             
@@ -36,7 +36,13 @@ namespace gravitymania.math
 
 	        Vector2 E = xForm * e.Position;
             Vector2 d = xForm * velocity;
-            Vector2 f = E - (xForm * point);
+			Vector2 p = (xForm * point);
+            Vector2 f = E - p;
+
+			if (Vector2.Dot(d, f) > 0.0f)
+			{
+				return false;
+			}
 
             float a = d.LengthSquared();
 	        float b = 2.0f * Vector2.Dot(f, d);
@@ -54,6 +60,8 @@ namespace gravitymania.math
 
 	        if (t0 >= 0.0f && t0 <= 1.0f) {
 		        result.Time = t0;
+				Vector2 hitPosition = E + (d * t0);
+				result.Normal = (hitPosition - p).GetNormal();
                 result.Type = CollisionObject.Point;
                 result.Hit = true;
 		        return true;
@@ -61,6 +69,8 @@ namespace gravitymania.math
 
 	        if (t1 >= 0.0f && t1 <= 1.0f) {
                 result.Time = t1;
+				Vector2 hitPosition = E + (d * t0);
+				result.Normal = (hitPosition - p).GetNormal();
                 result.Type = CollisionObject.Point;
                 result.Hit = true;
 		        return true;
@@ -79,7 +89,7 @@ namespace gravitymania.math
             }
 
             Vector2 xForm = e.ESpace;
-            Vector2 rForm = new Vector2(1.0f / xForm.X, 1.0f / xForm.Y);
+			Vector2 rForm = e.Size;
 
             Vector2 xFormedPosition = xForm * e.Position;
             Vector2 xFormedVelocity = xForm * velocity;
@@ -87,16 +97,16 @@ namespace gravitymania.math
 
             LineEquation xFormedEquation = xFormedLine.GetEquation();
 
-            if (Vector2.Dot(velocity, xFormedEquation.Normal) > 0.0f)
+			if (Vector2.Dot(xFormedVelocity, xFormedEquation.Normal) >= -0.00000001f)
             {
                 return false;
             }
 
             bool embedded = false;
             float t0, t1;
-			float distAtStart = xFormedEquation.PointDistance(xFormedPosition); // distPointToLine(circleStart, line1, lineNormal);
+			float distAtStart = xFormedEquation.SignedDistance(xFormedPosition); // distPointToLine(circleStart, line1, lineNormal);
 
-            if (Vector2.Dot(xFormedEquation.Normal, velocity) == 0.0f)
+			if (Vector2.Dot(xFormedEquation.Normal, xFormedVelocity) == 0.0f)
             {
                 if (distAtStart >= 1.0f) return false;
                 else
@@ -107,7 +117,7 @@ namespace gravitymania.math
                 }
             }
 
-            float distAtEnd = xFormedEquation.PointDistance(xFormedPosition + xFormedVelocity);
+			float distAtEnd = xFormedEquation.SignedDistance(xFormedPosition + xFormedVelocity);
 
             t0 = (1.0f - distAtStart) / (distAtEnd - distAtStart);
             t1 = (-1.0f - distAtStart) / (distAtEnd - distAtStart);

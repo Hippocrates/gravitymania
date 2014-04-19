@@ -43,7 +43,15 @@ namespace gravitymania.map
 
 		public static TileDirection GetOpposite(this TileDirection direction)
 		{
-			return (TileDirection)((int)direction / 2) + (((int)direction + 1) % 2);
+			if ((int)direction % 2 == 1)
+			{
+				return (TileDirection)((int)direction - 1);
+			}
+			else
+			{
+				return (TileDirection)((int)direction + 1);
+			}
+			//return (TileDirection)((int)direction / 2) + (((int)direction + 1) % 2);
 		}
 
 		public static TileIndex GetOppositeOffset(this TileDirection direction)
@@ -366,7 +374,7 @@ namespace gravitymania.map
 				"000000000000000001100000000005" +
 				"000000000000000001100000000000" +
 				"000000000000000111110000000211" + 
-                "000000000000000111110000002111" + 
+                "222222222200000111110000002111" + 
                 "111111111100011111113000021111" + 
                 "111111111100011111111300211111" + 
                 "111111111100011111111111111111";
@@ -384,7 +392,7 @@ namespace gravitymania.map
 				"000000000000000000011100000000" +
 				"000000000000000000011100000000" +
 				"000000000000000000011110000000" +
-				"000000000000000000011110000000" +
+				"222222222200000000011110000000" +
                 "111111111100011111111111130000" +
                 "111111111100011111111111113000" +
                 "111111111100011111111111111300";

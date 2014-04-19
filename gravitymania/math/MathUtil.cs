@@ -40,5 +40,17 @@ namespace gravitymania.math
         {
             return new Vector2(self.Y, -self.X);
         }
+
+		public static int RealRound(this float self)
+		{
+			if (self >= 0.0f)
+			{
+				return (int)(self + 0.5f);
+			}
+			else
+			{
+				return (int)(self - 0.5f);
+			}
+		}
     }
 }

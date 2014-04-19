@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using gravitymania.math;
 
 namespace gravitymania.graphics
 {
@@ -207,6 +208,41 @@ namespace gravitymania.graphics
             return _hasBegun;
         }
 
+		private Vector2[] MakeBoxVerts(AABBox box)
+		{
+			return new Vector2[] { box.Min, new Vector2(box.Max.X, box.Min.Y), box.Max, new Vector2(box.Min.X, box.Max.Y), };
+		}
+
+		public void DrawBox(AABBox box, float red, float green, float blue)
+		{
+			DrawPolygon(MakeBoxVerts(box), red, green, blue);
+		}
+
+		public void DrawBox(AABBox box, Color color)
+		{
+			DrawPolygon(MakeBoxVerts(box), color);
+		}
+
+		public void DrawSolidBox(AABBox box, float red, float green, float blue, bool outline = false)
+		{
+			DrawSolidPolygon(MakeBoxVerts(box), red, green, blue);
+		}
+
+		public void DrawSolidBox(AABBox box, Color color, bool outline = false)
+		{
+			DrawSolidPolygon(MakeBoxVerts(box), color, outline);
+		}
+
+		public void DrawPolygon(Vector2[] vertices, float red, float green, float blue)
+		{
+			DrawPolygon(vertices, vertices.Length, red, green, blue);
+		}
+
+		public void DrawPolygon(Vector2[] vertices, Color color)
+		{
+			DrawPolygon(vertices, vertices.Length, color);
+		}
+
         public void DrawPolygon(Vector2[] vertices, int count, float red, float green, float blue)
         {
             DrawPolygon(vertices, count, new Color(red, green, blue));
@@ -228,17 +264,22 @@ namespace gravitymania.graphics
             this.AddVertex(vertices[0], color, PrimitiveType.LineList);
         }
 
-        public void DrawSolidPolygon(Vector2[] vertices, int count, float red, float green, float blue)
+		public void DrawSolidPolygon(Vector2[] vertices, float red, float green, float blue, bool outline = false)
         {
-            DrawSolidPolygon(vertices, count, new Color(red, green, blue), true);
+            DrawSolidPolygon(vertices, vertices.Length, new Color(red, green, blue), outline);
         }
 
-        public void DrawSolidPolygon(Vector2[] vertices, int count, Color color)
+		public void DrawSolidPolygon(Vector2[] vertices, Color color, bool outline = false)
+		{
+			DrawSolidPolygon(vertices, vertices.Length, color, outline);
+		}
+
+		public void DrawSolidPolygon(Vector2[] vertices, int count, float red, float green, float blue, bool outline = false)
         {
-            DrawSolidPolygon(vertices, count, color, true);
+			DrawSolidPolygon(vertices, count, new Color(red, green, blue), outline);
         }
 
-        public void DrawSolidPolygon(Vector2[] vertices, int count, Color color, bool outline)
+        public void DrawSolidPolygon(Vector2[] vertices, int count, Color color, bool outline = false)
         {
             if (!this.IsReady())
             {
@@ -265,6 +306,42 @@ namespace gravitymania.graphics
             }
         }
 
+		public void DrawEllipse(Vector2 position, Vector2 radii, float red, float green, float blue)
+		{
+			DrawEllipse(new Ellipse(position, radii), new Color(red, green, blue));
+		}
+
+		public void DrawEllipse(Vector2 position, Vector2 radii, Color color)
+		{
+			DrawEllipse(new Ellipse(position, radii), color);
+		}
+
+		public void DrawEllipse(Ellipse ellipse, float red, float green, float blue)
+		{
+			DrawEllipse(ellipse, new Color(red, green, blue));
+		}
+
+		public void DrawEllipse(Ellipse ellipse, Color color)
+		{
+			if (!this.IsReady())
+			{
+				throw new InvalidOperationException("BeginCustomDraw must be called before drawing anything.");
+			}
+			const double increment = Math.PI * 2.0 / CircleSegments;
+			double theta = 0.0;
+
+			for (int i = 0; i < CircleSegments; i++)
+			{
+				Vector2 v1 = ellipse.Position + ellipse.Size * new Vector2((float)Math.Cos(theta), (float)Math.Sin(theta));
+				Vector2 v2 = ellipse.Position + ellipse.Size * new Vector2((float)Math.Cos(theta + increment), (float)Math.Sin(theta + increment));
+
+				this.AddVertex(v1, color, PrimitiveType.LineList);
+				this.AddVertex(v2, color, PrimitiveType.LineList);
+
+				theta += increment;
+			}
+		}
+
         public void DrawCircle(Vector2 center, float radius, float red, float green, float blue)
         {
             DrawCircle(center, radius, new Color(red, green, blue));
@@ -272,6 +349,8 @@ namespace gravitymania.graphics
 
         public void DrawCircle(Vector2 center, float radius, Color color)
         {
+			DrawEllipse(new Ellipse(center, new Vector2(radius, radius)), color);
+			/*
             if (!this.IsReady())
             {
                 throw new InvalidOperationException("BeginCustomDraw must be called before drawing anything.");
@@ -291,15 +370,18 @@ namespace gravitymania.graphics
 
                 theta += increment;
             }
+			*/
         }
 
-        public void DrawSolidCircle(Vector2 center, float radius, Vector2 axis, float red, float green, float blue)
+        public void DrawSolidCircle(Vector2 center, float radius, Vector2 axis, float red, float green, float blue, bool outline = false)
         {
-            DrawSolidCircle(center, radius, axis, new Color(red, green, blue));
+			DrawSolidCircle(center, radius, axis, new Color(red, green, blue), outline);
         }
 
-        public void DrawSolidCircle(Vector2 center, float radius, Vector2 axis, Color color)
+		public void DrawSolidCircle(Vector2 center, float radius, Vector2 axis, Color color, bool outline = false)
         {
+			DrawSolidEllipse(new Ellipse(center, new Vector2(radius, radius)), axis, color, outline);
+			/*
             if (!this.IsReady())
             {
                 throw new InvalidOperationException("BeginCustomDraw must be called before drawing anything.");
@@ -328,7 +410,58 @@ namespace gravitymania.graphics
             DrawCircle(center, radius, color);
 
             DrawSegment(center, center + axis * radius, color);
+			*/
         }
+
+		public void DrawSolidEllipse(Vector2 position, Vector2 radii, Vector2 axis, float red, float green, float blue, bool outline = false)
+		{
+			DrawSolidEllipse(new Ellipse(position, radii), axis, new Color(red, green, blue), outline);
+		}
+
+		public void DrawSolidEllipse(Vector2 position, Vector2 radii, Vector2 axis, Color color, bool outline = false)
+		{
+			DrawSolidEllipse(new Ellipse(position, radii), axis, color, outline);
+		}
+
+		public void DrawSolidEllipse(Ellipse ellipse, Vector2 axis, float red, float green, float blue, bool outline = false)
+		{
+			DrawSolidEllipse(ellipse, axis, new Color(red, green, blue), outline);
+		}
+
+		public void DrawSolidEllipse(Ellipse ellipse, Vector2 axis, Color color, bool outline = false)
+		{
+			if (!this.IsReady())
+			{
+				throw new InvalidOperationException("BeginCustomDraw must be called before drawing anything.");
+			}
+			const double increment = Math.PI * 2.0 / CircleSegments;
+			double theta = 0.0;
+
+			Color colorFill = color * 0.5f;
+
+			Vector2 v0 = ellipse.Position + ellipse.Size * new Vector2((float)Math.Cos(theta), (float)Math.Sin(theta));
+			theta += increment;
+
+			for (int i = 1; i < CircleSegments - 1; i++)
+			{
+				Vector2 v1 = ellipse.Position + ellipse.Size * new Vector2((float)Math.Cos(theta), (float)Math.Sin(theta));
+				Vector2 v2 = ellipse.Position + ellipse.Size * new Vector2((float)Math.Cos(theta + increment), (float)Math.Sin(theta + increment));
+
+				this.AddVertex(v0, colorFill, PrimitiveType.TriangleList);
+				this.AddVertex(v1, colorFill, PrimitiveType.TriangleList);
+				this.AddVertex(v2, colorFill, PrimitiveType.TriangleList);
+
+				theta += increment;
+			}
+
+			if (outline)
+			{
+				DrawEllipse(ellipse, color);
+			}
+
+			axis.Normalize();
+			DrawSegment(ellipse.Position, ellipse.Position + axis * ellipse.Size, color);
+		}
 
         public void DrawSegment(Vector2 start, Vector2 end, float red, float green, float blue)
         {
@@ -437,7 +570,7 @@ namespace gravitymania.graphics
                 {
                     FlushLines();
                 }
-                _lineVertices[_lineVertsCount].Position = new Vector3(vertex, 0f);
+				_lineVertices[_lineVertsCount].Position = new Vector3(vertex, -0.2f);
                 _lineVertices[_lineVertsCount].Color = color;
                 _lineVertsCount++;
             }
@@ -474,6 +607,7 @@ namespace gravitymania.graphics
                 int primitiveCount = _triangleVertsCount / 3;
                 // submit the draw call to the graphics card
                 _device.SamplerStates[0] = SamplerState.AnisotropicClamp;
+				_device.RasterizerState = RasterizerState.CullNone;
                 _device.DrawUserPrimitives(PrimitiveType.TriangleList, _triangleVertices, 0, primitiveCount);
                 _triangleVertsCount -= primitiveCount * 3;
             }

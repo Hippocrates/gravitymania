@@ -7,155 +7,135 @@ using gravitymania.math;
 
 namespace gravitymania.camera
 {
+	public static class CameraUtil
+	{
+		public static Matrix ScreenOffsetMatrix(uint screenWidth, uint screenHeight, Rectangle bounds)
+		{
+			float xScale = (float)bounds.Width / (float)screenWidth;
+			float yScale = (float)bounds.Height / (float)screenHeight;
+
+			float xDisplacement = ((float)bounds.Left + ((float)bounds.Width / 2.0f) / (float)screenWidth) * 2.0f;
+			float yDisplacement = (((float)bounds.Top + ((float)bounds.Height / 2.0f)) / (float)screenHeight) * 2.0f;
+
+			return Matrix.CreateScale(xScale, yScale, 1.0f) * Matrix.CreateTranslation(1.0f - xDisplacement, 1.0f - yDisplacement, 0.0f);
+		}
+
+		public static Matrix DeviceToScreenMatrix(uint screenWidth, uint screenHeight)
+		{
+			float halfWidth = (float)screenWidth / 2.0f;
+			float halfHeight = (float)screenHeight / 2.0f;
+			return Matrix.CreateScale(halfWidth, -halfHeight, 1.0f) * Matrix.CreateTranslation(halfWidth, halfHeight, 0.0f);
+		}
+
+		public static Matrix ScreenToDeviceMatrix(uint screenWidth, uint screenHeight)
+		{
+			return Matrix.Invert(DeviceToScreenMatrix(screenWidth, screenHeight));
+		}
+
+		public static Matrix WorldToDeviceMatrix(Vector2 viewField, Vector2 position)
+		{
+			Vector2 scale = new Vector2(2.0f / viewField.X, 2.0f / viewField.Y);
+			return Matrix.CreateTranslation(-position.X, -position.Y, 1.0f) * Matrix.CreateScale(scale.X, scale.Y, 1.0f);
+		}
+
+		public static Matrix DeviceToWorldMatrix(Vector2 fieldSize, Vector2 position)
+		{
+			return Matrix.Invert(WorldToDeviceMatrix(fieldSize, position));
+		}
+	}
+
+
 	public class Camera
 	{
-        public Matrix WorldToViewport { get; private set; }
-        public Matrix ViewportToWorld
+		public uint ScreenWidth;
+		public uint ScreenHeight;
+		public Rectangle Viewport;
+		public Vector2 Position;
+		public Vector2 ViewField;
+		public bool FlipX;
+		public bool FlipY;
+
+		public Matrix WorldToDevice
+		{
+			get
+			{
+				return WorldToDeviceRaw * CameraUtil.ScreenOffsetMatrix(ScreenWidth, ScreenHeight, Viewport);
+			}
+		}
+
+		public Matrix WorldToDeviceRaw
+		{
+			get
+			{
+				return CameraUtil.WorldToDeviceMatrix(ViewField, Position) * Matrix.CreateScale(FlipX ? -1.0f : 1.0f, FlipY ? -1.0f : 1.0f, 1.0f);
+			}
+		}
+
+		public Matrix DeviceToWorldRaw
+		{
+			get
+			{
+				return Matrix.Invert(WorldToDeviceRaw);
+			}
+		}
+
+		public Matrix DeviceToWorld
+		{
+			get
+			{
+				return Matrix.Invert(WorldToDevice);
+			}
+		}
+
+		public Matrix WorldToScreen
+		{
+			get
+			{
+				return WorldToDevice * CameraUtil.DeviceToScreenMatrix(ScreenWidth, ScreenHeight);
+			}
+		}
+
+		public Matrix ScreenToWorld
+		{
+			get
+			{
+				return Matrix.Invert(WorldToScreen);
+			}
+		}
+
+		public Camera(uint screenWidth, uint screenHeight, Rectangle viewport, Vector2 viewField, Vector2 initialPosition, bool flipX = false, bool flipY = false)
         {
-            get
-            {
-                return Matrix.Invert(WorldToViewport);
-            }
-        }
-
-        public Vector2 ViewportSize
-        {
-            get { return _ViewportSize; }
-            set
-            {
-                _ViewportSize = value;
-                RecalculateWorldToViewMatrix();
-            }
-        }
-
-        public Vector2 FieldSize
-        {
-            get { return _FieldSize; }
-            set
-            {
-                _FieldSize = value;
-                RecalculateWorldToViewMatrix();
-            }
-        }
-
-        public Vector2 Position
-        {
-            get { return _Position; }
-            set
-            {
-                _Position = value;
-                RecalculateWorldToViewMatrix();
-            }
-        }
-
-        public Vector2 DrawOffset
-        {
-            get
-            {
-                return _DrawOffset;
-            }
-            set
-            {
-                _DrawOffset = value;
-            }
-        }
-
-        private bool InvertY;
-
-        /// <summary>
-        /// Build a new camera given the physical viewport in pixels and the field of view size in game units.
-        /// </summary>
-        public Camera(Vector2 viewportSize, Vector2 fieldSize, Vector2 initialPosition, Vector2 drawOffset = new Vector2(), bool invertY = false)
-        {
-            _ViewportSize = viewportSize;
-            _FieldSize = fieldSize;
-            _Position = initialPosition;
-            _DrawOffset = drawOffset;
-            InvertY = invertY;
-
-            RecalculateWorldToViewMatrix();
-        }
-
-        /// <summary>
-        /// Takes a world-space vector and transforms it into screen co-ordinates
-        /// </summary>
-        public Vector2 TransformToView(Vector2 position)
-        {
-            return Vector2.Transform(position, WorldToViewport) + DrawOffset;
-        }
-
-        public Vector2 GetViewLockPosition(Vector2 targetPosition, Vector2 screenLock)
-        {
-            return targetPosition - (TransformToWorld(screenLock) - Position);
-        }
-
-
-        /// <summary>
-        /// Takes a screen-space vector and transforms it into world co-ordinates
-        /// </summary>
-        public Vector2 TransformToWorld(Vector2 screenPosition)
-        {
-            return Vector2.Transform(screenPosition, ViewportToWorld) - DrawOffset;
+			ScreenWidth = screenWidth;
+			ScreenHeight = screenHeight;
+			Viewport = viewport;
+			ViewField = viewField;
+			Position = initialPosition;
+			FlipX = flipX;
+			FlipY = flipY;
         }
 
         public AABBox GetFieldBounds()
         {
-            return new AABBox(Position - (FieldSize / 2.0f), Position + (FieldSize / 2.0f));
+			return new AABBox(Position - (ViewField / 2.0f), Position + (ViewField / 2.0f));
         }
 
         /// <summary>
         /// Takes a world-space AABB and transforms it into a screen rectangle
         /// </summary>
-        public Rectangle TransformToView(AABBox fieldBounds)
+        public Rectangle GetSpriteBox(AABBox fieldBounds)
         {
+			Vector2 temp = Vector2.Transform(fieldBounds.Min, WorldToDevice);
+
             // This method needs to compensate for the fact that I'm fliping the y co-ords
             // to be the opposite of screen co-ords
-            Vector2 l = TransformToView(fieldBounds.Min);
-            Vector2 u = TransformToView(fieldBounds.Max);
+			Vector2 lower = Vector2.Transform(fieldBounds.Min, WorldToScreen);
+			Vector2 upper = Vector2.Transform(fieldBounds.Max, WorldToScreen);
 
-            Vector2 lower;
-            Vector2 upper;
+			Vector2 l = new Vector2(Math.Min(lower.X, upper.X), Math.Min(lower.Y, upper.Y));
+			Vector2 u = new Vector2(Math.Max(lower.X, upper.X), Math.Max(lower.Y, upper.Y));
 
-            if (InvertY)
-            {
-                lower = new Vector2(l.X, l.Y);
-                upper = new Vector2(u.X, u.Y);
-            }
-            else
-            {
-                lower = new Vector2(l.X, u.Y);
-                upper = new Vector2(u.X, l.Y);
-            }
-
-            return new Rectangle((int)lower.X, (int)lower.Y, (int)(upper.X - lower.X), (int)(upper.Y - lower.Y));
+			return new Rectangle(MathUtil.RealRound(l.X), MathUtil.RealRound(l.Y), MathUtil.RealRound(u.X - l.X), MathUtil.RealRound(u.Y - l.Y));
         }
-
-        private void RecalculateWorldToViewMatrix()
-        {
-            float xScale = ViewportSize.X / FieldSize.X;
-            float yScale = ViewportSize.Y / FieldSize.Y;
-
-            Vector2 screenCenter = new Vector2(ViewportSize.X / 2f, ViewportSize.Y / 2f);
-
-            if (InvertY)
-            {
-                WorldToViewport = Matrix.CreateTranslation(new Vector3(-Position, 0.0f)) * Matrix.CreateScale(xScale, yScale, 1.0f) * Matrix.CreateTranslation(new Vector3(screenCenter, 0.0f));
-            }
-            else
-            {
-                WorldToViewport = Matrix.CreateTranslation(new Vector3(-Position, 0.0f)) * Matrix.CreateScale(xScale, -yScale, 1.0f) * Matrix.CreateTranslation(new Vector3(screenCenter, 0.0f));
-            }
-        }
-
-        public Matrix CreateOrthographicProjection()
-        {
-            return Matrix.CreateOrthographicOffCenter(0f, ViewportSize.X, ViewportSize.Y, 0f, 0f, 1f);
-        }
-
-        private Vector2 _Position;
-        private Vector2 _ViewportSize;
-        private Vector2 _FieldSize;
-        private Vector2 _DrawOffset;
     }
 }
 

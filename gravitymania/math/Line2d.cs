@@ -43,8 +43,23 @@ namespace gravitymania.math
 
         public float PointDistance(Vector2 p)
         {
-            return Math.Abs(MultiplyThrough(p)) / Normal.Length();
+			return Math.Abs(SignedDistance(p));
         }
+
+		public float SignedDistance(Vector2 p)
+		{
+			return MultiplyThrough(p) / Normal.Length();
+		}
+
+		public Vector2 RightHandNormal()
+		{
+			return new Vector2(Normal.Y, -Normal.X);
+		}
+
+		public Vector2 LeftHandNormal()
+		{
+			return new Vector2(-Normal.Y, Normal.X);
+		}
     }
 
     public struct LineSegment

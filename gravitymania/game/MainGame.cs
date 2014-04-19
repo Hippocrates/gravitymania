@@ -57,7 +57,7 @@ namespace gravitymania.game
             Cameras = new Camera[2];
             for (int i = 0; i < 2; ++i)
             {
-                Cameras[i] = new Camera(new Vector2(Root.Graphics.ScreenWidth, Root.Graphics.ScreenHeight / 2.0f), DefaultFieldSize, new Vector2(DefaultFieldSize.X / 2, DefaultFieldSize.Y / 2), new Vector2(0.0f, i * 240), i == 1);
+				Cameras[i] = new Camera(Root.Graphics.ScreenWidth, Root.Graphics.ScreenHeight, new Rectangle(0, (int)(Root.Graphics.ScreenHeight / 2) * i, (int)Root.Graphics.ScreenWidth, (int)(Root.Graphics.ScreenHeight / 2)), DefaultFieldSize, new Vector2(DefaultFieldSize.X / 2, DefaultFieldSize.Y / 2), false, i == 1);
             }
             
             Maps = TileMapLoader.LoadFromStupidText();
@@ -73,7 +73,7 @@ namespace gravitymania.game
 
             for (int i = 0; i < 2; ++i)
             {
-                Players[i] = new Player(this, i, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 3 + TileSize / 2), new Vector2(TileSize / 2, TileSize / 2));
+                Players[i] = new Player(this, i, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 4 + TileSize / 2), new Vector2(TileSize / 2, TileSize / 2));
             }
         }
 
@@ -112,6 +112,26 @@ namespace gravitymania.game
 			if (FrameAdvance.ShouldUpdateThisFrame())
 			{
 
+				if (state.GetButtonState(KeyboardKey.Find("right")) == ButtonState.Pressed)
+				{
+					Cameras[0].Position += new Vector2(5.0f, 0.0f);
+				}
+
+				if (state.GetButtonState(KeyboardKey.Find("up")) == ButtonState.Pressed)
+				{
+					Cameras[0].Position += new Vector2(0.0f, 5.0f);
+				}
+
+				if (state.GetButtonState(KeyboardKey.Find("down")) == ButtonState.Pressed)
+				{
+					Cameras[0].Position += new Vector2(0.0f, -5.0f);
+				}
+
+				if (state.GetButtonState(KeyboardKey.Find("left")) == ButtonState.Pressed)
+				{
+					Cameras[0].Position += new Vector2(-5.0f, 0.0f);
+				}
+
 				for (int i = 0; i < PlayerKeys.Length; ++i)
 				{
 					for (int j = 0; j < PlayerKeys[i].Length; ++j)
@@ -139,65 +159,63 @@ namespace gravitymania.game
         {
             Drawer.Begin();
 
-            for (int i = 0; i < 2; ++i)
-            {
-                TileRange bounds = Maps[i].GetTileRange(Cameras[i].GetFieldBounds());
+			for (int i = 0; i < 2; ++i)
+			{
+				TileRange bounds = Maps[i].GetTileRange(Cameras[i].GetFieldBounds());
 
-                for (int y = bounds.Bottom; y <= bounds.Top; ++y)
-                {
-                    for (int x = bounds.Left; x <= bounds.Right; ++x)
-                    {
-                        Tile t = Maps[i].GetTile(x, y);
+				for (int y = bounds.Bottom; y <= bounds.Top; ++y)
+				{
+					for (int x = bounds.Left; x <= bounds.Right; ++x)
+					{
+						Tile t = Maps[i].GetTile(x, y);
 
-                        if (t.Collision == CollisionType.SolidBox)
-                        {
-                            Rectangle box = Cameras[i].TransformToView(Maps[i].GetTileBox(x, y));
-                            Drawer.Draw(onePixelTexture, box, Color.Tomato);
-                        }
-                    }
-                }
-            }
+						if (t.Collision == CollisionType.SolidBox)
+						{
+							Rectangle box = Cameras[i].GetSpriteBox(Maps[i].GetTileBox(x, y));
+							Drawer.Draw(onePixelTexture, box, Color.Tomato);
+						}
+					}
+				}
+			}
 
-            for (int i = 0; i < 2; ++i)
-            {
-                Players[i].Render(Drawer, Cameras[i]);
+			Drawer.Draw(onePixelTexture, new Rectangle(0, (int)(Root.Graphics.ScreenHeight / 2) - 4, (int) Root.Graphics.ScreenWidth, 8), Color.RosyBrown);
 
-                PrimitivesDrawer.Begin(Cameras[i].CreateOrthographicProjection(), Cameras[i].WorldToViewport * Matrix.CreateTranslation(Cameras[i].DrawOffset.X, Cameras[i].DrawOffset.Y, 0.0f));
-                
-                Color[] colors = new Color[] { Color.FloralWhite, Color.Aquamarine, Color.LightGreen };
+			Drawer.End();
 
-                for (int j = 0; j < Players[i].collisionInfoThisFrame.Count; ++j)
-                {
-                    CollisionResult c = Players[i].collisionInfoThisFrame[j];
-                    Vector2 lineDir = c.Normal.GetLeftNorm();
-                    LineSegment segment = new LineSegment(c.Position + (lineDir * 8.0f), c.Position - (lineDir * 8.0f));
+			for (int i = 0; i < 2; ++i)
+			{
+				PrimitivesDrawer.Begin(Matrix.Identity, Cameras[i].WorldToDevice);
 
-                    Color color;
+				PrimitivesDrawer.DrawEllipse(Players[i].GetCollision(), Color.Fuchsia);
 
-                    if (j > colors.Length)
-                    {
-                        color = Color.Black;
-                    }
-                    else
-                    {
-                        color = colors[j];
-                    }
+				//Players[i].Render(Drawer, Cameras[i]);
 
-                    PrimitivesDrawer.DrawSegment(segment.Start, segment.End, color);
+				Color[] colors = new Color[] { Color.FloralWhite, Color.Aquamarine, Color.LightGreen };
 
-                    PrimitivesDrawer.DrawPoint(c.Position, 2.0f, Color.FloralWhite);
+				for (int j = 0; j < Players[i].collisionInfoThisFrame.Count; ++j)
+				{
+					CollisionResult c = Players[i].collisionInfoThisFrame[j];
+					Vector2 lineDir = c.Normal.GetLeftNorm();
+					LineSegment segment = new LineSegment(c.Position + (lineDir * 8.0f), c.Position - (lineDir * 8.0f));
 
-                   
-                }
+					Color color;
 
-                PrimitivesDrawer.End();
-            }
+					if (j > colors.Length)
+					{
+						color = Color.Black;
+					}
+					else
+					{
+						color = colors[j];
+					}
 
+					PrimitivesDrawer.DrawSegment(segment.Start, segment.End, color);
 
+					PrimitivesDrawer.DrawPoint(c.Position, 2.0f, Color.ForestGreen);
+				}
 
-            Drawer.Draw(onePixelTexture, new Rectangle(0, 236, 640, 8), Color.RosyBrown);
-
-            Drawer.End();
+				PrimitivesDrawer.End();
+			}
         }
     }
 }

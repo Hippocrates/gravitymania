@@ -15,13 +15,12 @@ namespace gravitymania.player
 {
     public class Player
     {
-        private const float Gravity = 0.5f;
+        private const float Gravity = 0.9f;
         private const float JumpVelocity = 10.0f;
         private const float UpwardCharge = 600.0f;
         private const float DownwardCharge = -300.0f;
         private const float ChargeCoreRadius = 32.0f;
         private const float CollisionBuffer = 0.1f;
-        //private static readonly float JumpHeight = (JumpVelocity / 2.0f) * (JumpVelocity / Gravity);
 
         private Texture2D Image;
         public Vector2 HalfWidth;
@@ -52,10 +51,6 @@ namespace gravitymania.player
 
             Grounded = true;
             GravityCharge = 0.0f;
-
-
-            Position = new Vector2(443.1862f, 121.5f);
-            Velocity = new Vector2(5.0f, 10.0f);
         }
 
         public float BasicChargeAmount
@@ -106,22 +101,49 @@ namespace gravitymania.player
             {
                 if (InputState.IsDown(PlayerKey.LEFT))
                 {
-                    Velocity.X = -5.0f;
+					Velocity.X = -4.0f;
+					/*
+					if (Velocity.X >= -0.5f)
+					{
+						Velocity.X -= 0.9f;
+					}
+					else
+					{
+						Velocity.X -= 0.2f;
+					}
+					*/
                 }
                 else
                 {
-                    Velocity.X = 5.0f;
-                }
-
-                if (Math.Abs(Velocity.X) > 5.0f)
-                {
-                    //Velocity.X = Math.Sign(Velocity.X) * 5.0f;
+					Velocity.X = 4.0f;
+					/*
+					if (Velocity.X <= 0.5f)
+					{
+						Velocity.X += 0.9f;
+					}
+					else
+					{
+						Velocity.X += 0.2f;
+					}
+					*/
                 }
             }
             else
             {
-                Velocity.X = 0.0f;
+				if (Math.Abs(Velocity.X) > 0.7f)
+				{
+					Velocity.X -= Math.Sign(Velocity.X) * 0.7f;
+				}
+				else
+				{
+					Velocity.X = 0.0f;
+				}
             }
+
+			if (Math.Abs(Velocity.X) > 4.0f)
+			{
+				Velocity.X = Math.Sign(Velocity.X) * 4.0f;
+			}
 
 			if (LeftWall && InputState.IsDown(PlayerKey.JUMP))
 			{
@@ -174,7 +196,14 @@ namespace gravitymania.player
             // otherwise colliding with them _sooner_ than it would with lines
             for (int i = 0; i < 2; ++i)
             {
-                result = GetFirstCollision(game);
+				if (i == 0)
+				{
+					result = GetFirstCollision(game);
+				}
+				else
+				{
+					result = GetFirstCollision(game, firstPlane.Normal);
+				}
 
                 if (!result.Hit)
                 {
@@ -189,14 +218,41 @@ namespace gravitymania.player
 
                 Position += Velocity.GetNormal() * shortDist;
 
-                if (i == 0)
-                {
-                    Vector2 eRad = result.Normal * HalfWidth;
-                    float longRadius = eRad.Length() + 0.0001f;
-                    firstPlane = new LineEquation(result.Position, result.Normal);
-                    destination -= (firstPlane.PointDistance(destination) - longRadius) * firstPlane.Normal;
-                    Velocity = destination - Position;
-                }
+                Vector2 eRad = result.Normal * HalfWidth;
+                float longRadius = eRad.Length() + 0.00001f;
+                LineEquation currentPlane = new LineEquation(result.Position, result.Normal);
+
+				if (i == 0)
+				{
+					firstPlane = currentPlane;
+				}
+
+				// The original (that is to say, improved) algorithm only did this for the 'first' 
+				// plane, however I think this adjustment needs to be done for the second one as well
+				// to avoid the problem of 'accumulating' velocity
+				float adjustmentLength = (currentPlane.SignedDistance(destination) - longRadius);
+				Vector2 adjustment = adjustmentLength * currentPlane.Normal;
+				destination -= adjustment;
+				Velocity = destination - Position;
+
+				// This is a hack to avoid numeric problems causing objects to 'sink' into slopes as 
+				// you ascend them:
+				// Basically, it re-corrects your velocity to be _exactly_ the slope if you would otherwise
+				// be about to sink into it.
+				float direction = Vector2.Dot(Velocity, currentPlane.Normal);
+				if (shortDist == 0.0f && result.Type == CollisionObject.Line && direction < 0.0f)
+				{
+					Vector2 lhs = currentPlane.LeftHandNormal();
+
+					if (Vector2.Dot(Velocity, lhs) > 0.0f)
+					{
+						Velocity = lhs * Velocity.Length();
+					}
+					else
+					{
+						Velocity = currentPlane.RightHandNormal() * Velocity.Length();
+					}
+				}
 
                 if (Vector2.Dot(result.Normal, new Vector2(0.0f, 1.0f)) > 0.7f)
                 {
@@ -231,14 +287,16 @@ namespace gravitymania.player
 
         public void Render(SpriteBatch drawer, Camera camera)
         {
-            Rectangle box = camera.TransformToView(Bounds);
+            Rectangle box = camera.GetSpriteBox(Bounds);
             drawer.Draw(Image, box, Color.BlanchedAlmond);
         }
 
-        public int lastX;
-        public int lastY;
+		public CollisionResult GetFirstCollision(MainGame game)
+		{
+			return GetFirstCollision(game, Vector2.Zero);
+		}
 
-        public CollisionResult GetFirstCollision(MainGame game)
+        public CollisionResult GetFirstCollision(MainGame game, Vector2 disallowedNormal)
         {
             TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
 
@@ -255,14 +313,17 @@ namespace gravitymania.player
 
                     if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, segment, out result))
                     {
-                        if (!foundAny || (result.Hit && bestResult.Time > result.Time && result.Time >= 0.0f))
+						if (!foundAny || (result.Hit && bestResult.Time > result.Time && result.Time >= 0.0f))
                         {
-                            if (PlayerIndex == 0)
-                            {
-                            }
-                            bestResult = result;
-                            lastX = i.X;
-                            lastY = i.Y;
+							// This additional check is to avoid 'bumpiness' when transfering between pairs of line segments 
+							// Normally, the slightly altered normal when hitting the endpoints would cause it to treat 
+							// it as a discrete event, but since the normals are almost identical, they should not 
+							// cause a second collision event
+							if (Vector2.Dot(result.Normal, disallowedNormal) < (1.0f - 0.001f))
+							{
+								bestResult = result;
+								foundAny = true;
+							}
                         }
                     }
                 }
