@@ -206,7 +206,7 @@ namespace gravitymania.player
                 Position += Velocity.GetNormalized() * distanceWithTolerance;
 
                 Vector2 eRad = result.Normal * HalfWidth;
-                float longRadius = eRad.Length() + 0.00001f;
+                float longRadius = eRad.Length() + 0.0001f;
                 LineEquation currentPlane = new LineEquation(result.Position, result.Normal);
 
 				if (i == 0)
@@ -230,7 +230,7 @@ namespace gravitymania.player
 
 				// Apply friction, unless we are travelling 'up' a wall, as this is super annoying
 				// (Could probably change this to _any_ wall if no wall jumping
-				if (Vector2.Dot(Velocity.GetNormalized(), new Vector2(0.0f, 1.0f)) < 1.0f - 0.0001f)
+				if (Vector2.Dot(Velocity.GetNormalized(), new Vector2(0.0f, 1.0f)) < 0.3f)
 				{
 					// multiply by dynamic friction (this should be returned by the collision result structure
 					Velocity *= 0.7f;

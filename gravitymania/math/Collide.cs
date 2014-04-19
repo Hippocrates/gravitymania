@@ -139,7 +139,7 @@ namespace gravitymania.math
             Vector2 xFormedOffset = xFormedPosition - xFormedPoint;
 
 			// if the direction is _away_ from the point, don't collide
-			if (Vector2.Dot(xFormedVelocity, xFormedOffset) >= 0.0f)
+			if (Vector2.Dot(xFormedVelocity, xFormedOffset) > 0.0f)
 			{
 				return false;
 			}
@@ -161,7 +161,7 @@ namespace gravitymania.math
 	        if (t0 >= 0.0f && t0 <= 1.0f) {
 		        result.Time = t0;
 				Vector2 hitPosition = xFormedPosition + (xFormedVelocity * t0);
-				result.Normal = (rForm * (hitPosition - xFormedPoint)).GetNormalized();
+				result.Normal = (xForm * (hitPosition - xFormedPoint)).GetNormalized();
                 result.Type = CollisionObject.Point;
                 result.Hit = true;
 		        return true;
@@ -170,7 +170,7 @@ namespace gravitymania.math
 	        if (t1 >= 0.0f && t1 <= 1.0f) {
                 result.Time = t1;
 				Vector2 hitPosition = xFormedPosition + (xFormedVelocity * t0);
-				result.Normal = (rForm * (hitPosition - xFormedPoint)).GetNormalized();
+				result.Normal = (xForm * (hitPosition - point)).GetNormalized();
                 result.Type = CollisionObject.Point;
                 result.Hit = true;
 		        return true;
@@ -197,7 +197,7 @@ namespace gravitymania.math
 
             LineEquation xFormedEquation = xFormedLine.GetEquation();
 
-			if (Vector2.Dot(xFormedVelocity, xFormedEquation.Normal) >= 0.0f)
+			if (Vector2.Dot(xFormedVelocity, xFormedEquation.Normal) > 0.0f)
 			{
 				return false;
 			}
@@ -239,7 +239,7 @@ namespace gravitymania.math
                 {
                     result.Time = t0;
                     result.Position = rForm * (finalCenter - xFormedEquation.Normal);
-					result.Normal = (rForm * xFormedEquation.Normal).GetNormalized();
+					result.Normal = line.LeftHandNormal().GetNormalized();
                     result.Type = CollisionObject.Line;
 					result.Hit = true;
 					return true;

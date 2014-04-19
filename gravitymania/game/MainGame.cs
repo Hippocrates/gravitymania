@@ -73,7 +73,7 @@ namespace gravitymania.game
 
             for (int i = 0; i < 2; ++i)
             {
-                Players[i] = new Player(this, i, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 4 + TileSize / 2), new Vector2(TileSize / 2, TileSize / 2));
+				Players[i] = new Player(this, i, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 4 + TileSize / 2), new Vector2(TileSize / 2, TileSize));
             }
         }
 
