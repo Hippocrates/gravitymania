@@ -27,6 +27,7 @@ namespace gravitymania.player
         public Vector2 Position;
         public Vector2 Velocity;
         public Vector2 LastKnownGroundPosition;
+		public Vector2 LastKnownGroundPlane;
         public InputFrame<PlayerKey> InputState;
 		public int PlayerIndex { get; private set; }
         public float GravityCharge;
@@ -43,6 +44,7 @@ namespace gravitymania.player
             Position = position;
             HalfWidth = halfWidth;
             Velocity = new Vector2(0.0f, 0.0f);
+			LastKnownGroundPlane = new Vector2(0.0f, 1.0f);
 
             Image = new Texture2D(game.Root.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             Image.SetData(new[] { Color.White });
@@ -97,36 +99,20 @@ namespace gravitymania.player
 
         public void Update(MainGame game)
         {
-            if (InputState.IsDown(PlayerKey.LEFT) || InputState.IsDown(PlayerKey.RIGHT))
+			Direction inputDirection = InputState.IsDown(PlayerKey.LEFT) ? Direction.Left : (InputState.IsDown(PlayerKey.RIGHT) ? Direction.Right : Direction.None);
+
+			// TODO: implement actual accelleration/decelleration and the like
+            if (inputDirection != Direction.None)
             {
-                if (InputState.IsDown(PlayerKey.LEFT))
-                {
-					Velocity.X = -4.0f;
-					/*
-					if (Velocity.X >= -0.5f)
-					{
-						Velocity.X -= 0.9f;
-					}
-					else
-					{
-						Velocity.X -= 0.2f;
-					}
-					*/
-                }
-                else
-                {
-					Velocity.X = 4.0f;
-					/*
-					if (Velocity.X <= 0.5f)
-					{
-						Velocity.X += 0.9f;
-					}
-					else
-					{
-						Velocity.X += 0.2f;
-					}
-					*/
-                }
+				if (Grounded)
+				{
+					// Change this so that going 'down' is faster than going 'up'
+					Velocity = LastKnownGroundPlane.GetRightNorm() * 4.0f * inputDirection.Sign();
+				}
+				else
+				{
+					Velocity.X = 4.0f * inputDirection.Sign();
+				}
             }
             else
             {
@@ -145,6 +131,7 @@ namespace gravitymania.player
 				Velocity.X = Math.Sign(Velocity.X) * 4.0f;
 			}
 
+			/*
 			if (LeftWall && InputState.IsDown(PlayerKey.JUMP))
 			{
 				Velocity = new Vector2(0.0f, JumpVelocity);
@@ -156,6 +143,7 @@ namespace gravitymania.player
 				Velocity = new Vector2(0.0f, JumpVelocity);
 				Grounded = false;
 			}
+			*/
 
             if (Grounded && InputState.IsDown(PlayerKey.JUMP))
             {
@@ -183,40 +171,39 @@ namespace gravitymania.player
 
             Vector2 initialVelocity = Velocity;
             Vector2 initialPosition = Position;
-            Vector2 destination = Position + Velocity;
-            Vector2 initialDesitination = destination;
             LineEquation firstPlane = new LineEquation();
-
             CollisionResult result;
 
             collisionInfoThisFrame.Clear();
 
-            // TODO: This still doesn't work very well
-            // The problem seems to be points: the ellipse is 'bumping' over them on flat surfaces, or 
-            // otherwise colliding with them _sooner_ than it would with lines
+			float currentTime = 0.0f;
+
             for (int i = 0; i < 2; ++i)
             {
 				if (i == 0)
 				{
-					result = GetFirstCollision(game);
+					result = GetFirstCollision(game, currentTime);
 				}
 				else
 				{
-					result = GetFirstCollision(game, firstPlane.Normal);
+					result = GetFirstCollision(game, currentTime, firstPlane.Normal);
 				}
 
                 if (!result.Hit)
                 {
-                    Position = destination;
+					Position += Velocity * (1.0f - currentTime);
                     break;
                 }
 
+				// Decrease the time 'remaining' in the current frame
+				currentTime -= result.Time;
                 collisionInfoThisFrame.Add(result);
 
-                float distance = Velocity.Length() * result.Time;
-                float shortDist = Math.Max(distance - 0.00001f, 0.0f);
+				// Ensure that there is some floating-point tolerance added to collisions
+                float distanceToHit = Velocity.Length() * result.Time;
+				float distanceWithTolerance = Math.Max(distanceToHit - 0.0001f, 0.0f);
 
-                Position += Velocity.GetNormal() * shortDist;
+                Position += Velocity.GetNormalized() * distanceWithTolerance;
 
                 Vector2 eRad = result.Normal * HalfWidth;
                 float longRadius = eRad.Length() + 0.00001f;
@@ -227,37 +214,54 @@ namespace gravitymania.player
 					firstPlane = currentPlane;
 				}
 
-				// The original (that is to say, improved) algorithm only did this for the 'first' 
-				// plane, however I think this adjustment needs to be done for the second one as well
-				// to avoid the problem of 'accumulating' velocity
-				float adjustmentLength = (currentPlane.SignedDistance(destination) - longRadius);
-				Vector2 adjustment = adjustmentLength * currentPlane.Normal;
-				destination -= adjustment;
-				Velocity = destination - Position;
+				// re-direct velocity to be the projection onto the current plane
+				// (Note, this makes landing on a slope a little off-putting, it may make sense to favor heavier x-projection)
+				Vector2 planeLhs = currentPlane.LeftNorm();
+				Vector2 planeRhs = currentPlane.RightNorm();
 
-				// This is a hack to avoid numeric problems causing objects to 'sink' into slopes as 
-				// you ascend them:
-				// Basically, it re-corrects your velocity to be _exactly_ the slope if you would otherwise
-				// be about to sink into it.
-				float direction = Vector2.Dot(Velocity, currentPlane.Normal);
-				if (shortDist == 0.0f && result.Type == CollisionObject.Line && direction < 0.0f)
+				if (Vector2.Dot(Velocity, planeLhs) > 0.0f)
 				{
-					Vector2 lhs = currentPlane.LeftHandNormal();
+					Velocity = Vector2.Dot(planeLhs, Velocity) * planeLhs;
+				}
+				else
+				{
+					Velocity = Vector2.Dot(planeRhs, Velocity) * planeRhs;
+				}
 
-					if (Vector2.Dot(Velocity, lhs) > 0.0f)
+				// Apply friction, unless we are travelling 'up' a wall, as this is super annoying
+				// (Could probably change this to _any_ wall if no wall jumping
+				if (Vector2.Dot(Velocity.GetNormalized(), new Vector2(0.0f, 1.0f)) < 1.0f - 0.0001f)
+				{
+					// multiply by dynamic friction (this should be returned by the collision result structure
+					Velocity *= 0.7f;
+
+					// If we are on a 'groundable' slope, and our velocity is within a tolerable
+					// threshold, immediately stop all movement alltogehter
+					if (Velocity.Length() < 0.8f && Vector2.Dot(result.Normal, new Vector2(0.0f, 1.0f)) > 0.7f)
 					{
-						Velocity = lhs * Velocity.Length();
-					}
-					else
-					{
-						Velocity = currentPlane.RightHandNormal() * Velocity.Length();
+						// Eventually, this should be that the velocity is set to the relative velocity of the object
+						// we are on, but for static objects it shouldn't matter
+						Velocity = new Vector2(0.0f, 0.0f);
 					}
 				}
 
                 if (Vector2.Dot(result.Normal, new Vector2(0.0f, 1.0f)) > 0.7f)
                 {
                     Grounded = true;
+					RightWall = false;
+					LeftWall = false;
+					LastKnownGroundPlane = result.Normal;
                 }
+
+				if (!Grounded && Vector2.Dot(result.Normal, new Vector2(-1.0f, 0.0f)) == 1.0f)
+				{
+					RightWall = true;
+				}
+
+				if (!Grounded && Vector2.Dot(result.Normal, new Vector2(1.0f, 0.0f)) == 1.0f)
+				{
+					LeftWall = true;
+				}
             }
 
             if (Bounds.Min.Y < 0.0f)
@@ -265,13 +269,14 @@ namespace gravitymania.player
                 Velocity.Y = 0.0f;
                 Position.Y = HalfWidth.Y;
                 Grounded = true;
+				LastKnownGroundPlane = new Vector2(0.0f, 1.0f);
             }
 
             if (Grounded)
             {
 				LeftWall = false;
 				RightWall = false;
-                LastKnownGroundPosition = Position - new Vector2(0.0f, HalfWidth.Y);
+                LastKnownGroundPosition = Position;
             }
         }
 
@@ -291,12 +296,17 @@ namespace gravitymania.player
             drawer.Draw(Image, box, Color.BlanchedAlmond);
         }
 
-		public CollisionResult GetFirstCollision(MainGame game)
+		public CollisionResult GetFirstCollision(MainGame game, float currentTime = 0.0f)
 		{
-			return GetFirstCollision(game, Vector2.Zero);
+			return GetFirstCollision(game, currentTime, Vector2.Zero);
 		}
 
-        public CollisionResult GetFirstCollision(MainGame game, Vector2 disallowedNormal)
+		public CollisionResult GetFirstCollision(MainGame game, Vector2 disallowedNormal)
+		{
+			return GetFirstCollision(game, 0.0f, Vector2.Zero);
+		}
+
+        public CollisionResult GetFirstCollision(MainGame game, float currentTime, Vector2 disallowedNormal)
         {
             TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
 
@@ -311,10 +321,10 @@ namespace gravitymania.player
                 {
                     CollisionResult result;
 
-                    if (Collide.CollideEllipseWithLine(GetCollision(), Velocity, segment, out result))
-                    {
-						if (!foundAny || (result.Hit && bestResult.Time > result.Time && result.Time >= 0.0f))
-                        {
+					if (Collide.CollideEllipseWithLine(GetCollision(), Velocity * (1.0f - currentTime), segment, out result))
+					{
+						if (result.Hit && (!foundAny || bestResult.Time > result.Time))
+						{
 							// This additional check is to avoid 'bumpiness' when transfering between pairs of line segments 
 							// Normally, the slightly altered normal when hitting the endpoints would cause it to treat 
 							// it as a discrete event, but since the normals are almost identical, they should not 
@@ -324,8 +334,8 @@ namespace gravitymania.player
 								bestResult = result;
 								foundAny = true;
 							}
-                        }
-                    }
+						}
+					}
                 }
             }
 

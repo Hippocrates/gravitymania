@@ -51,14 +51,14 @@ namespace gravitymania.math
 			return MultiplyThrough(p) / Normal.Length();
 		}
 
-		public Vector2 RightHandNormal()
+		public Vector2 RightNorm()
 		{
-			return new Vector2(Normal.Y, -Normal.X);
+			return Normal.GetRightNorm();
 		}
 
-		public Vector2 LeftHandNormal()
+		public Vector2 LeftNorm()
 		{
-			return new Vector2(-Normal.Y, Normal.X);
+			return Normal.GetLeftNorm();
 		}
     }
 

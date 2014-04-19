@@ -23,30 +23,130 @@ namespace gravitymania.math
 		public bool Hit;
     }
 
+	public struct OverlapResult
+	{
+		public CollisionObject Type;
+		public float OverlappingDistance;
+		public bool Overlapping;
+		public Vector2 EjectionNormal;
+		public Vector2 EjectionPoint;
+	}
+
     public static class Collide
     {
+		// This is a special method for checking if you are already inside the point, it should be used as a final backup 
+		// check at the beginning of the frame to make sure you avoid starting out in a bad state.
+		public static bool CheckOverlapEllipseWithPoint(Ellipse e, Vector2 point, out OverlapResult result)
+		{
+			result = new OverlapResult() { Overlapping = false, };
+
+			Vector2 xForm = e.ESpace;
+			Vector2 rForm = e.Size;
+
+			Vector2 xFormedPosition = xForm * e.Position;
+			Vector2 xFormedPoint = (xForm * point);
+			Vector2 xFormedOffset = xFormedPosition - xFormedPoint;
+
+			float offsetLengthSq = xFormedOffset.LengthSquared();
+
+			if (offsetLengthSq < 1.0f)
+			{
+				Vector2 circleEdge = (Math.Abs(offsetLengthSq) < 0.00001f) ? new Vector2(0.0f, 1.0f) : -xFormedOffset.GetNormalized();
+
+				result.Overlapping = true;
+				result.OverlappingDistance = ((circleEdge + xFormedOffset) * rForm).Length();
+				result.EjectionNormal = (rForm * xFormedOffset).GetNormalized();
+				result.EjectionPoint = point;
+				result.Type = CollisionObject.Point;
+
+				return true;
+			}
+
+			return false;
+		}
+
+		// This is a special method for checking if you are already inside the line, it should be used as a final backup 
+		// check at the beginning of the frame to make sure you avoid starting out in a bad state.
+		public static bool CheckOverlapEllipseWithLine(Ellipse e, LineSegment line, out OverlapResult result)
+		{
+			Vector2 xForm = e.ESpace;
+			Vector2 rForm = e.Size;
+
+			Vector2 xFormedPosition = xForm * e.Position;
+			LineSegment xFormedLine = new LineSegment(xForm * line.Start, xForm * line.End);
+
+			LineEquation xFormedEquation = xFormedLine.GetEquation();
+
+			result = new OverlapResult() { Overlapping = false, };
+
+			float distAtStart = xFormedEquation.SignedDistance(xFormedPosition); // distPointToLine(circleStart, line1, lineNormal);
+
+			if (Math.Abs(distAtStart) < 1.0f)
+			{
+				Vector2 closestPoint = xFormedEquation.ClosestPoint(xFormedPosition);
+				if (xFormedLine.WithinBoundingBox(closestPoint))
+				{
+					result.Type = CollisionObject.Line;
+					result.Overlapping = true;
+					Vector2 circleEdge = -xFormedEquation.Normal + xFormedPosition;
+					result.OverlappingDistance = ((circleEdge - closestPoint) * rForm).Length();
+					result.EjectionNormal = xFormedEquation.Normal;
+					result.EjectionPoint = closestPoint * rForm;
+					return true;
+				}
+			    // else check overlap/collision with endpoints (note that you can exit after this point I think, since if you started
+			    // at this distance, don't cross the enpoints, and aren't initially touching the line, you also cannot be touching the line
+			    // at any point in the interim
+				else
+				{
+					OverlapResult result1, result2;
+					bool hit = false;
+
+					if (CheckOverlapEllipseWithPoint(e, line.Start, out result1))
+					{
+						result = result1;
+						hit = true;
+					}
+					if (CheckOverlapEllipseWithPoint(e, line.End, out result2))
+					{
+						if (!result.Overlapping || result2.OverlappingDistance < result.OverlappingDistance)
+						{
+							result = result2;
+							hit = true;
+						}
+					}
+
+					if (hit)
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
         public static bool CollideEllipseWithPoint(Ellipse e, Vector2 velocity, Vector2 point, out CollisionResult result)
         {
             result = new CollisionResult() { Time = 1.0f, Position = point, Hit = false, Type = CollisionObject.None };
 
-            result.Normal.Normalize();
-            
             Vector2 xForm = e.ESpace;
-            Vector2 rForm = new Vector2(1.0f / xForm.X, 1.0f / xForm.Y);
+			Vector2 rForm = e.Size;
 
-	        Vector2 E = xForm * e.Position;
-            Vector2 d = xForm * velocity;
-			Vector2 p = (xForm * point);
-            Vector2 f = E - p;
+	        Vector2 xFormedPosition = xForm * e.Position;
+            Vector2 xFormedVelocity = xForm * velocity;
+			Vector2 xFormedPoint = (xForm * point);
+            Vector2 xFormedOffset = xFormedPosition - xFormedPoint;
 
-			if (Vector2.Dot(d, f) > 0.0f)
+			// if the direction is _away_ from the point, don't collide
+			if (Vector2.Dot(xFormedVelocity, xFormedOffset) >= 0.0f)
 			{
 				return false;
 			}
 
-            float a = d.LengthSquared();
-	        float b = 2.0f * Vector2.Dot(f, d);
-            float c = f.LengthSquared() - 1.0f; //radius * radius;
+            float a = xFormedVelocity.LengthSquared();
+	        float b = 2.0f * Vector2.Dot(xFormedOffset, xFormedVelocity);
+            float c = xFormedOffset.LengthSquared() - 1.0f; //radius * radius;
 
 	        float discriminant = b * b - 4 * a * c;
             if (discriminant < 0.0f)
@@ -60,8 +160,8 @@ namespace gravitymania.math
 
 	        if (t0 >= 0.0f && t0 <= 1.0f) {
 		        result.Time = t0;
-				Vector2 hitPosition = E + (d * t0);
-				result.Normal = (hitPosition - p).GetNormal();
+				Vector2 hitPosition = xFormedPosition + (xFormedVelocity * t0);
+				result.Normal = (rForm * (hitPosition - xFormedPoint)).GetNormalized();
                 result.Type = CollisionObject.Point;
                 result.Hit = true;
 		        return true;
@@ -69,8 +169,8 @@ namespace gravitymania.math
 
 	        if (t1 >= 0.0f && t1 <= 1.0f) {
                 result.Time = t1;
-				Vector2 hitPosition = E + (d * t0);
-				result.Normal = (hitPosition - p).GetNormal();
+				Vector2 hitPosition = xFormedPosition + (xFormedVelocity * t0);
+				result.Normal = (rForm * (hitPosition - xFormedPoint)).GetNormalized();
                 result.Type = CollisionObject.Point;
                 result.Hit = true;
 		        return true;
@@ -97,10 +197,10 @@ namespace gravitymania.math
 
             LineEquation xFormedEquation = xFormedLine.GetEquation();
 
-			if (Vector2.Dot(xFormedVelocity, xFormedEquation.Normal) >= -0.00000001f)
-            {
-                return false;
-            }
+			if (Vector2.Dot(xFormedVelocity, xFormedEquation.Normal) >= 0.0f)
+			{
+				return false;
+			}
 
             bool embedded = false;
             float t0, t1;
@@ -130,8 +230,6 @@ namespace gravitymania.math
             if (t0 > 1.0f || t1 < 0.0f) return false;
             t0 = MathUtil.Clamp(t0, 0.0f, 1.0f);
 
-            bool hit = false;
-
             if (!embedded)
             {
                 Vector2 finalCenter = xFormedPosition + t0 * xFormedVelocity;
@@ -141,34 +239,30 @@ namespace gravitymania.math
                 {
                     result.Time = t0;
                     result.Position = rForm * (finalCenter - xFormedEquation.Normal);
-					result.Normal = xFormedEquation.Normal;
+					result.Normal = (rForm * xFormedEquation.Normal).GetNormalized();
                     result.Type = CollisionObject.Line;
-                    hit = true;
+					result.Hit = true;
+					return true;
                 }
             }
 
-            if (!hit)
+			bool hit = false;
+
+            CollisionResult result1, result2;
+                
+            if (CollideEllipseWithPoint(e, velocity, line.Start, out result1))
             {
-                
-                CollisionResult result1, result2;
-                
-                if (CollideEllipseWithPoint(e, velocity, line.Start, out result1))
+                result = result1;
+                hit = true;
+            }
+            if (CollideEllipseWithPoint(e, velocity, line.End, out result2))
+            {
+                if (!result.Hit || result2.Time <= result.Time)
                 {
-                    result = result1;
+                    result = result2;
                     hit = true;
                 }
-                if (CollideEllipseWithPoint(e, velocity, line.End, out result2))
-                {
-                    if (result2.Time <= result.Time)
-                    {
-                        result = result2;
-                        hit = true;
-                    }
-                }
-                 
             }
-
-            result.Hit = hit;
 
             return hit;
         }
