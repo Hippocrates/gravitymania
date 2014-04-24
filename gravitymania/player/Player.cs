@@ -131,20 +131,6 @@ namespace gravitymania.player
 				Velocity.X = Math.Sign(Velocity.X) * 4.0f;
 			}
 
-			/*
-			if (LeftWall && InputState.IsDown(PlayerKey.JUMP))
-			{
-				Velocity = new Vector2(0.0f, JumpVelocity);
-				Grounded = false;
-			}
-
-			if (RightWall && InputState.IsDown(PlayerKey.JUMP))
-			{
-				Velocity = new Vector2(0.0f, JumpVelocity);
-				Grounded = false;
-			}
-			*/
-
             if (Grounded && InputState.IsDown(PlayerKey.JUMP))
             {
                 Velocity.Y = JumpVelocity;

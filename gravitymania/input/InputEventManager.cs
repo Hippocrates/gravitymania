@@ -8,10 +8,12 @@ namespace gravitymania.input
 {
 	public class InputEventManager
 	{
+        public event Action<RawKey, bool> RawKeyEvent;
 		public event Action<KeyboardKey, bool, KeyboardState> KeyboardEvent;
 		public event Action<MouseState> MouseMouseEvent;
         public event Action<int, MouseState> MouseWheelEvent;
 		public event Action<MouseKey, bool, MouseState> MouseButtonEvent;
+        public event Action<X360PadKey, bool> JoyPadEvent;
 
 		private InputState PreviousState;
 		private InputState CurrentState;
@@ -34,8 +36,29 @@ namespace gravitymania.input
 					{
 						KeyboardEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed, CurrentState.Keys);
 					}
+
+                    if (RawKeyEvent != null)
+                    {
+                        RawKeyEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
+                    }
 				}
 			}
+
+            foreach (X360PadKey key in X360PadKey.KeyList)
+            {
+                if (CurrentState.GetButtonState(key) != PreviousState.GetButtonState(key))
+                {
+                    if (JoyPadEvent != null)
+                    {
+                        JoyPadEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
+                    }
+
+                    if (RawKeyEvent != null)
+                    {
+                        RawKeyEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
+                    }
+                }
+            }
 
 			foreach (MouseKey key in MouseKey.KeyList)
 			{
@@ -45,6 +68,11 @@ namespace gravitymania.input
 					{
 						MouseButtonEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed, CurrentState.Mouse);
 					}
+
+                    if (RawKeyEvent != null)
+                    {
+                        RawKeyEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
+                    }
 				}
 			}
 
@@ -54,6 +82,8 @@ namespace gravitymania.input
                 {
                     MouseWheelEvent.Invoke(CurrentState.Mouse.ScrollWheelValue - PreviousState.Mouse.ScrollWheelValue, CurrentState.Mouse);
                 }
+
+
             }
 
 			if (CurrentState.Mouse.X != PreviousState.Mouse.X ||

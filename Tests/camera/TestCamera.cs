@@ -9,6 +9,7 @@ using gravitymania.camera;
 
 namespace gravitymaniaTest.camera
 {
+    /*
     [TestFixture]
     class TestCamera
     {
@@ -162,4 +163,5 @@ namespace gravitymaniaTest.camera
             Assert.AreEqual(emergencyScreenMaxX, adjustedPlayerScreenPos.X);
         }
     }
+     */
 }
