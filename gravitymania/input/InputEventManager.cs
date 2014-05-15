@@ -2,99 +2,74 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Microsoft.Xna.Framework.Input;
 
 namespace gravitymania.input
 {
-	public class InputEventManager
-	{
-        public event Action<RawKey, bool> RawKeyEvent;
-		public event Action<KeyboardKey, bool, KeyboardState> KeyboardEvent;
-		public event Action<MouseState> MouseMouseEvent;
-        public event Action<int, MouseState> MouseWheelEvent;
-		public event Action<MouseKey, bool, MouseState> MouseButtonEvent;
-        public event Action<X360PadKey, bool> JoyPadEvent;
+    public interface InputEventListener
+    {
+        void InputEvent(EventKey e, EventData d);
+    }
 
-		private InputState PreviousState;
-		private InputState CurrentState;
+    public class InputEventManager
+    {
+        private Dictionary<EventKey, InputEventListener> Listeners = new Dictionary<EventKey, InputEventListener>();
+        private Dictionary<EventKey, InputEventGenerator> Generators = new Dictionary<EventKey, InputEventGenerator>();
 
-        public void Flush()
+        public InputEventManager()
         {
-            PreviousState = new InputState();
         }
 
-		public void Update(InputState state)
-		{
-			PreviousState = CurrentState;
-			CurrentState = state;
-
-			foreach (KeyboardKey key in KeyboardKey.KeyList)
-			{
-				if (CurrentState.GetButtonState(key) != PreviousState.GetButtonState(key))
-				{
-					if (KeyboardEvent != null)
-					{
-						KeyboardEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed, CurrentState.Keys);
-					}
-
-                    if (RawKeyEvent != null)
-                    {
-                        RawKeyEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
-                    }
-				}
-			}
-
-            foreach (X360PadKey key in X360PadKey.KeyList)
+        public void RunInput(InputState input)
+        {
+            foreach (var kv in Generators)
             {
-                if (CurrentState.GetButtonState(key) != PreviousState.GetButtonState(key))
+                if (Listeners.ContainsKey(kv.Key))
                 {
-                    if (JoyPadEvent != null)
-                    {
-                        JoyPadEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
-                    }
+                    EventData data = kv.Value.Update(input);
 
-                    if (RawKeyEvent != null)
+                    if (data != null)
                     {
-                        RawKeyEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
+                        Listeners[kv.Key].InputEvent(kv.Key, data);
                     }
                 }
             }
+        }
 
-			foreach (MouseKey key in MouseKey.KeyList)
-			{
-				if (CurrentState.GetButtonState(key) != PreviousState.GetButtonState(key))
-				{
-					if (MouseButtonEvent != null)
-					{
-						MouseButtonEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed, CurrentState.Mouse);
-					}
+        public void SetInputGenerator(EventKey code, InputEventGenerator generator)
+        {
+            Generators[code] = generator;
+        }
 
-                    if (RawKeyEvent != null)
-                    {
-                        RawKeyEvent.Invoke(key, CurrentState.GetButtonState(key) == ButtonState.Pressed);
-                    }
-				}
-			}
-
-            if (CurrentState.Mouse.ScrollWheelValue != PreviousState.Mouse.ScrollWheelValue)
+        public void ClearInputGenerator(EventKey code)
+        {
+            if (Generators.ContainsKey(code))
             {
-                if (MouseWheelEvent != null)
-                {
-                    MouseWheelEvent.Invoke(CurrentState.Mouse.ScrollWheelValue - PreviousState.Mouse.ScrollWheelValue, CurrentState.Mouse);
-                }
-
-
+                Generators.Remove(code);
             }
+        }
 
-			if (CurrentState.Mouse.X != PreviousState.Mouse.X ||
-				CurrentState.Mouse.Y != PreviousState.Mouse.Y)
-			{
-				if (MouseMouseEvent != null)
-				{
-					MouseMouseEvent.Invoke(CurrentState.Mouse);
-				}
-			}
-		}
+        public void SetInputEventListener(EventKey code, InputEventListener listener)
+        {
+            Listeners[code] = listener;
+        }
 
-	}
+        public void ClearInputEventListener(EventKey code)
+        {
+            if (Listeners.ContainsKey(code))
+            {
+                Listeners.Remove(code);
+            }
+        }
+
+        public void RemoveInputEventListener(InputEventListener listener)
+        {
+            foreach (var kv in Listeners.ToArray())
+            {
+                if (kv.Value == listener)
+                {
+                    Listeners.Remove(kv.Key);
+                }
+            }
+        }
+    }
 }

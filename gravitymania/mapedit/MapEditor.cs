@@ -10,12 +10,12 @@ namespace gravitymania.mapedit
     class MapEditor : GameState
     {
         private GameRoot Root;
-        private InputEventManager InputManager;
+        private GUIEventManager InputManager;
 
         public MapEditor(GameRoot root)
         {
             Root = root;
-            InputManager = new InputEventManager();
+            InputManager = new GUIEventManager();
         }
 
         public void Begin()

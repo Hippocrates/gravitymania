@@ -80,7 +80,7 @@ namespace gravitymaniaTest.input
 		[Test]
 		public void TestBasicKeyPressEvent()
 		{
-			InputEventManager manager = new InputEventManager();
+			GUIEventManager manager = new GUIEventManager();
 
 			Keys[] keys = new Keys[]{ Keys.B, Keys.A, Keys.C };
 
@@ -116,7 +116,7 @@ namespace gravitymaniaTest.input
 		[Test]
 		public void TestBasicMouseMoveEvent()
 		{
-			InputEventManager manager = new InputEventManager();
+			GUIEventManager manager = new GUIEventManager();
 
 			int mouseX = 123;
 			int mouseY = 33;
@@ -164,7 +164,7 @@ namespace gravitymaniaTest.input
 		[Test]
 		public void TestBasicMouseButtonEvent()
 		{
-			InputEventManager manager = new InputEventManager();
+			GUIEventManager manager = new GUIEventManager();
 
 			MouseButton[] buttons = new MouseButton[] { MouseButton.Left, MouseButton.Middle, MouseButton.X2 };
 

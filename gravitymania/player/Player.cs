@@ -10,10 +10,11 @@ using gravitymania.main;
 using gravitymania.math;
 using gravitymania.input;
 using gravitymania.map;
+using Microsoft.Xna.Framework.Input;
 
 namespace gravitymania.player
 {
-    public class Player
+    public class Player : InputEventListener
     {
         private const float Gravity = 0.9f;
         private const float JumpVelocity = 10.0f;
@@ -49,27 +50,47 @@ namespace gravitymania.player
             Image = new Texture2D(game.Root.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
             Image.SetData(new[] { Color.White });
 
-            InputState = new InputFrame<PlayerKey>();
-
             Grounded = true;
             GravityCharge = 0.0f;
+        }
+
+        public void InputEvent(EventKey e, EventData d)
+        {
+            if (e.Code == EventCode.Left)
+            {
+                // do something
+            }
+            else if (e.Code == EventCode.Right)
+            {
+                // do something
+            }
+            else if (e.Code == EventCode.Jump)
+            {
+                HoldEventData data = d as HoldEventData;
+
+                if (data.State == ButtonState.Pressed && Grounded)
+                {
+                    Velocity.Y = JumpVelocity;
+                    Grounded = false;
+                }
+            }
         }
 
         public float BasicChargeAmount
         {
             get
             {
-                if (Grounded)
-                {
-                    return 0.0f;
-                }
-                else if (Velocity.Y > 0.0f)
+                if (Velocity.Y > 0.0f)
                 {
                     return UpwardCharge;
                 }
-                else
+                else if (Velocity.Y < 0.0f)
                 {
                     return DownwardCharge;
+                }
+                else
+                {
+                    return 0.0f;
                 }
             }
         }
@@ -99,6 +120,7 @@ namespace gravitymania.player
 
         public void Update(MainGame game)
         {
+            /*
 			Direction inputDirection = InputState.IsDown(PlayerKey.LEFT) ? Direction.Left : (InputState.IsDown(PlayerKey.RIGHT) ? Direction.Right : Direction.None);
 
 			// TODO: implement actual accelleration/decelleration and the like
@@ -130,17 +152,10 @@ namespace gravitymania.player
 			{
 				Velocity.X = Math.Sign(Velocity.X) * 4.0f;
 			}
+            */
 
-            if (Grounded && InputState.IsDown(PlayerKey.JUMP))
-            {
-                Velocity.Y = JumpVelocity;
-				Grounded = false;
-            }
-            else
-            {
-                Velocity.Y -= Gravity;
-            }
-
+            Velocity.Y -= Gravity;
+            
             Player other = OtherPlayer(game);
 
             Vector2 v = new Vector2(0.0f, Math.Min(-(other.Position.Y + Position.Y), -ChargeCoreRadius));
@@ -327,6 +342,5 @@ namespace gravitymania.player
 
             return bestResult;
         }
-        
     }
 }

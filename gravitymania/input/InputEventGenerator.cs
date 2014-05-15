@@ -6,32 +6,27 @@ using Microsoft.Xna.Framework.Input;
 
 namespace gravitymania.input
 {
-    public enum EventCode
+
+    public interface EventData
     {
-        None = 0,
-        Left,
-        Right,
-        Jump,
     }
 
-    public class InputEvent
+    public class HoldEventData : EventData
     {
-        public InputEvent(EventCode code, ButtonState state)
+        public HoldEventData(ButtonState state)
         {
-            Code = code;
             State = state;
         }
 
-        public EventCode Code;
         public ButtonState State;
     }
 
     public interface InputEventGenerator
     {
-        InputEvent Update(InputState state);
+        EventData Update(InputState state);
     }
 
-    public class HoldEventGenerator
+    public class HoldEventGenerator : InputEventGenerator
     {
         public RawKey ListenKey
         {
@@ -44,39 +39,33 @@ namespace gravitymania.input
             get;
             private set;
         }
-        public EventCode Code
-        { 
-            get; 
-            private set; 
-        }
 
-        public HoldEventGenerator(RawKey key, EventCode code)
+        public HoldEventGenerator(RawKey key)
         {
             ListenKey = key;
             State = ButtonState.Released;
-            Code = code;
         }
 
-        public InputEvent Update(InputState state)
+        public EventData Update(InputState state)
         {
             if (state.GetButtonState(ListenKey) != State)
             {
                 if (State == ButtonState.Pressed)
                 {
                     State = ButtonState.Released;
-                    return new InputEvent(Code, State);
+                    return new HoldEventData(State);
                 }
                 else
                 {
                     State = ButtonState.Pressed;
-                    return new InputEvent(Code, State);
+                    return new HoldEventData(State);
                 }
             }
 
-            return new InputEvent(EventCode.None, ButtonState.Released);
+            return null;
         }
 
-        public void SetKey(RawKey key)
+        public void SetListenKey(RawKey key)
         {
             ListenKey = key;
         }

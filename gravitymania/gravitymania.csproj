@@ -118,7 +118,9 @@
     <Compile Include="console\ConsoleDispatcher.cs" />
     <Compile Include="console\ConsoleParser.cs" />
     <Compile Include="game\MainGame.cs" />
+    <Compile Include="input\EventCode.cs" />
     <Compile Include="input\InputEventGenerator.cs" />
+    <Compile Include="input\GUIEventManager.cs" />
     <Compile Include="input\InputEventManager.cs" />
     <Compile Include="input\InputUtil.cs" />
     <Compile Include="main\GameState.cs" />

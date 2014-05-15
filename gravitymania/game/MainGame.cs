@@ -36,13 +36,14 @@ namespace gravitymania.game
         public Camera[] Cameras;
         public Player[] Players;
         public TileMap[] Maps;
+        public InputEventManager InputEventManager;
 
         public RawKey[][] PlayerKeys = new RawKey[2][]
         {
-            new RawKey[] { new X360PadKey(PlayerIndex.One, Buttons.DPadLeft), new X360PadKey(PlayerIndex.One, Buttons.DPadRight), new X360PadKey(PlayerIndex.One, Buttons.A), },
-            new RawKey[] { new X360PadKey(PlayerIndex.Two, Buttons.DPadLeft), new X360PadKey(PlayerIndex.Two, Buttons.DPadRight), new X360PadKey(PlayerIndex.Two, Buttons.A), },
-            //new RawKey[] { RawKey.Find("a"), RawKey.Find("d"), RawKey.Find("w") },
-            //new RawKey[] { RawKey.Find("LEFT"), RawKey.Find("RIGHT"), RawKey.Find("UP") },
+            //new RawKey[] { new X360PadKey(PlayerIndex.One, Buttons.DPadLeft), new X360PadKey(PlayerIndex.One, Buttons.DPadRight), new X360PadKey(PlayerIndex.One, Buttons.A), },
+            //new RawKey[] { new X360PadKey(PlayerIndex.Two, Buttons.DPadLeft), new X360PadKey(PlayerIndex.Two, Buttons.DPadRight), new X360PadKey(PlayerIndex.Two, Buttons.A), },
+            new RawKey[] { RawKey.Find("a"), RawKey.Find("d"), RawKey.Find("w") },
+            new RawKey[] { RawKey.Find("LEFT"), RawKey.Find("RIGHT"), RawKey.Find("UP") },
         };
 
         public readonly int TileSize = 16;
@@ -75,6 +76,24 @@ namespace gravitymania.game
             {
 				Players[i] = new Player(this, i, new Vector2(TileSize * 3 + TileSize / 2, TileSize * 4 + TileSize / 2), new Vector2(TileSize / 2, TileSize));
             }
+
+            InputEventManager = new InputEventManager();
+
+            InputEventManager.SetInputGenerator(new EventKey(EventCode.Left, InputPlayerIndex.One), new HoldEventGenerator(RawKey.Find("a")));
+            InputEventManager.SetInputGenerator(new EventKey(EventCode.Right, InputPlayerIndex.One), new HoldEventGenerator(RawKey.Find("d")));
+            InputEventManager.SetInputGenerator(new EventKey(EventCode.Jump, InputPlayerIndex.One), new HoldEventGenerator(RawKey.Find("w")));
+
+            InputEventManager.SetInputGenerator(new EventKey(EventCode.Left, InputPlayerIndex.Two), new HoldEventGenerator(RawKey.Find("LEFT")));
+            InputEventManager.SetInputGenerator(new EventKey(EventCode.Right, InputPlayerIndex.Two), new HoldEventGenerator(RawKey.Find("RIGHT")));
+            InputEventManager.SetInputGenerator(new EventKey(EventCode.Jump, InputPlayerIndex.Two), new HoldEventGenerator(RawKey.Find("UP")));
+
+            InputEventManager.SetInputEventListener(new EventKey(EventCode.Left, InputPlayerIndex.One), Players[(int)InputPlayerIndex.One]);
+            InputEventManager.SetInputEventListener(new EventKey(EventCode.Right, InputPlayerIndex.One), Players[(int)InputPlayerIndex.One]);
+            InputEventManager.SetInputEventListener(new EventKey(EventCode.Jump, InputPlayerIndex.One), Players[(int)InputPlayerIndex.One]);
+
+            InputEventManager.SetInputEventListener(new EventKey(EventCode.Left, InputPlayerIndex.Two), Players[(int)InputPlayerIndex.Two]);
+            InputEventManager.SetInputEventListener(new EventKey(EventCode.Right, InputPlayerIndex.Two), Players[(int)InputPlayerIndex.Two]);
+            InputEventManager.SetInputEventListener(new EventKey(EventCode.Jump, InputPlayerIndex.Two), Players[(int)InputPlayerIndex.Two]);
         }
 
         public void End()
@@ -111,34 +130,27 @@ namespace gravitymania.game
 
 			if (FrameAdvance.ShouldUpdateThisFrame())
 			{
-
-				if (state.GetButtonState(KeyboardKey.Find("right")) == ButtonState.Pressed)
+				if (state.GetButtonState(KeyboardKey.Find("j")) == ButtonState.Pressed)
 				{
 					Cameras[0].Position += new Vector2(5.0f, 0.0f);
 				}
 
-				if (state.GetButtonState(KeyboardKey.Find("up")) == ButtonState.Pressed)
+				if (state.GetButtonState(KeyboardKey.Find("i")) == ButtonState.Pressed)
 				{
 					Cameras[0].Position += new Vector2(0.0f, 5.0f);
 				}
 
-				if (state.GetButtonState(KeyboardKey.Find("down")) == ButtonState.Pressed)
+				if (state.GetButtonState(KeyboardKey.Find("k")) == ButtonState.Pressed)
 				{
 					Cameras[0].Position += new Vector2(0.0f, -5.0f);
 				}
 
-				if (state.GetButtonState(KeyboardKey.Find("left")) == ButtonState.Pressed)
+				if (state.GetButtonState(KeyboardKey.Find("l")) == ButtonState.Pressed)
 				{
 					Cameras[0].Position += new Vector2(-5.0f, 0.0f);
 				}
-
-				for (int i = 0; i < PlayerKeys.Length; ++i)
-				{
-					for (int j = 0; j < PlayerKeys[i].Length; ++j)
-					{
-						Players[i].InputState.SetState((PlayerKey)j, state.GetButtonState(PlayerKeys[i][j]) == ButtonState.Pressed);
-					}
-				}
+                
+                InputEventManager.RunInput(state);
 			}
         }
 
