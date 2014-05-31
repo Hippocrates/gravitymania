@@ -110,5 +110,10 @@ namespace gravitymania.math
 				return Direction.Left;
 			}
 		}
+
+        public static bool InRange(this float x, float lo, float hi)
+        {
+            return lo <= x && hi >= x;
+        }
     }
 }
