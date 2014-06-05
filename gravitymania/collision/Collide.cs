@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
+using gravitymania.math;
 
-namespace gravitymania.math
+namespace gravitymania.collision
 {
-    public enum CollisionObject
+    public enum CollisionGeometry
     {
         None = 0,
         Line,
@@ -16,7 +17,7 @@ namespace gravitymania.math
 
     public struct CollisionResult
     {
-        public CollisionObject Type;
+        public CollisionGeometry Type;
         public float Time;
         public Vector2 Position;
 		public Vector2 Normal;
@@ -25,7 +26,7 @@ namespace gravitymania.math
 
 	public struct OverlapResult
 	{
-		public CollisionObject Type;
+		public CollisionGeometry Type;
 		public float OverlappingDistance;
 		public bool Overlapping;
 		public Vector2 EjectionNormal;
@@ -57,7 +58,7 @@ namespace gravitymania.math
 				result.OverlappingDistance = ((circleEdge + xFormedOffset) * rForm).Length();
 				result.EjectionNormal = (rForm * xFormedOffset).GetNormalized();
 				result.EjectionPoint = point;
-				result.Type = CollisionObject.Point;
+				result.Type = CollisionGeometry.Point;
 
 				return true;
 			}
@@ -86,7 +87,7 @@ namespace gravitymania.math
 				Vector2 closestPoint = xFormedEquation.ClosestPoint(xFormedPosition);
 				if (xFormedLine.WithinBoundingBox(closestPoint))
 				{
-					result.Type = CollisionObject.Line;
+					result.Type = CollisionGeometry.Line;
 					result.Overlapping = true;
 					Vector2 circleEdge = -xFormedEquation.Normal + xFormedPosition;
 					result.OverlappingDistance = ((circleEdge - closestPoint) * rForm).Length();
@@ -128,7 +129,7 @@ namespace gravitymania.math
 
         public static bool CollideEllipseWithPoint(Ellipse e, Vector2 velocity, Vector2 point, out CollisionResult result)
         {
-            result = new CollisionResult() { Time = 1.0f, Position = point, Hit = false, Type = CollisionObject.None };
+            result = new CollisionResult() { Time = 1.0f, Position = point, Hit = false, Type = CollisionGeometry.None };
 
             Vector2 xForm = e.ESpace;
 			Vector2 rForm = e.Size;
@@ -162,7 +163,7 @@ namespace gravitymania.math
 		        result.Time = t0;
 				Vector2 hitPosition = xFormedPosition + (xFormedVelocity * t0);
 				result.Normal = (xForm * (hitPosition - xFormedPoint)).GetNormalized();
-                result.Type = CollisionObject.Point;
+                result.Type = CollisionGeometry.Point;
                 result.Hit = true;
 		        return true;
 	        }
@@ -171,7 +172,7 @@ namespace gravitymania.math
                 result.Time = t1;
 				Vector2 hitPosition = xFormedPosition + (xFormedVelocity * t0);
 				result.Normal = (xForm * (hitPosition - point)).GetNormalized();
-                result.Type = CollisionObject.Point;
+                result.Type = CollisionGeometry.Point;
                 result.Hit = true;
 		        return true;
 	        }
@@ -240,7 +241,7 @@ namespace gravitymania.math
                     result.Time = t0;
                     result.Position = rForm * (finalCenter - xFormedEquation.Normal);
 					result.Normal = line.LeftHandNormal().GetNormalized();
-                    result.Type = CollisionObject.Line;
+                    result.Type = CollisionGeometry.Line;
 					result.Hit = true;
 					return true;
                 }

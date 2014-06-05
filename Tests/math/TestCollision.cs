@@ -5,6 +5,7 @@ using System.Text;
 using NUnit.Framework;
 using gravitymania.math;
 using Microsoft.Xna.Framework;
+using gravitymania.collision;
 
 namespace gravitymaniatest.math
 {
@@ -33,7 +34,6 @@ namespace gravitymaniatest.math
             Ellipse ellipse = new Ellipse(new Vector2(0.0f, 0.0f), new Vector2(1.0f, 1.0f));
             Vector2 velocity = new Vector2(1.0f, 0.0f);
             LineSegment line = new LineSegment(new Vector2(1.5f, -2.0f), new Vector2(1.5f, 2.0f));
-
 
             CollisionResult result;
             bool collided = Collide.CollideEllipseWithLine(ellipse, velocity, line, out result);

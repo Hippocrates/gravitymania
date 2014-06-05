@@ -11,6 +11,7 @@ using gravitymania.math;
 using gravitymania.input;
 using gravitymania.map;
 using Microsoft.Xna.Framework.Input;
+using gravitymania.collision;
 
 namespace gravitymania.player
 {
@@ -21,7 +22,7 @@ namespace gravitymania.player
         JumpHeightCancel,
     }
 
-    public class Player : InputEventListener
+    public class Player : InputEventListener, EllipseCollisionObject
     {
         private const float JumpingGravity = 0.5f;
         private const float JumpCancelGravity = 1.1f;
@@ -44,22 +45,53 @@ namespace gravitymania.player
 
         private Texture2D Image;
         public Vector2 HalfWidth;
-        public Vector2 Position;
-        public Vector2 Velocity;
+
         public Vector2 LastKnownGroundPosition;
 		public Vector2 LastKnownGroundPlane;
         public Vector2 LastKnownGroundVelocity;
 		public int PlayerIndex { get; private set; }
         public float GravityCharge;
 
-        public bool Grounded;
-		public bool LeftWall;
-		public bool RightWall;
-
         public bool HeldLeft;
         public bool HeldRight;
         public bool HeldJump;
         public JumpState JumpState;
+
+        private Vector2 Position;
+        private Vector2 Velocity;
+
+        private bool Grounded;
+        private bool LeftWall;
+        private bool RightWall;
+
+        Vector2 CollisionObject.Position
+        {
+            get { return Position; }
+            set { Position = value; }
+        }
+
+        Vector2 CollisionObject.Velocity
+        {
+            get { return Velocity; }
+            set { Velocity = value; }
+        }
+
+
+        public AABBox RoughBounds
+        {
+            get
+            {
+                return new AABBox(Position - HalfWidth, Position + HalfWidth);
+            }
+        }
+
+        public Ellipse Collision
+        {
+            get
+            {
+                return new Ellipse(Position, HalfWidth);
+            }
+        }
 
         public List<CollisionResult> collisionInfoThisFrame = new List<CollisionResult>();
 
@@ -125,29 +157,6 @@ namespace gravitymania.player
                 }
             }
         }
-
-        public AABBox Bounds
-        {
-            get
-            {
-                return new AABBox(Position - HalfWidth, Position + HalfWidth);
-            }
-        }
-
-        public AABBox GetCollisionBounds()
-        {
-            AABBox box = new AABBox(Bounds);
-            box.AddInternalPoint(Bounds.Min + Velocity);
-            box.AddInternalPoint(Bounds.Max + Velocity);
-            box.AddInternalPoint(Bounds.Min + HalfWidth * CollisionBuffer);
-            box.AddInternalPoint(Bounds.Max + HalfWidth * CollisionBuffer);
-            return box;
-        }
-
-		public Ellipse GetCollision()
-		{
-			return new Ellipse(Position, HalfWidth);
-		}
 
         public void UpdateDirectionMovement(float direction)
         {
@@ -285,11 +294,11 @@ namespace gravitymania.player
             {
 				if (i == 0)
 				{
-					result = GetFirstCollision(game, currentTime);
+					result = GameCollision.GetFirstCollision(this, game.Data[this.PlayerIndex], currentTime);
 				}
 				else
 				{
-					result = GetFirstCollision(game, currentTime, firstPlane.Normal);
+                    result = GameCollision.GetFirstCollision(this, game.Data[this.PlayerIndex], currentTime, firstPlane.Normal);
 				}
 
                 if (!result.Hit)
@@ -308,8 +317,6 @@ namespace gravitymania.player
 
                 Position += Velocity.GetNormalized() * distanceWithTolerance;
 
-                Vector2 eRad = result.Normal * HalfWidth;
-                float longRadius = eRad.Length() + 0.0001f;
                 LineEquation currentPlane = new LineEquation(result.Position, result.Normal);
 
 				if (i == 0)
@@ -375,7 +382,7 @@ namespace gravitymania.player
 				}
             }
 
-            if (Bounds.Min.Y < 0.0f)
+            if (RoughBounds.Min.Y < 0.0f)
             {
                 Velocity.Y = 0.0f;
                 Position.Y = HalfWidth.Y;
@@ -387,6 +394,14 @@ namespace gravitymania.player
             {
 				LeftWall = false;
 				RightWall = false;
+
+                bool s = false;
+                if (s)
+                {
+                    Console.WriteLine(LeftWall);
+                    Console.WriteLine(RightWall);
+                }
+
                 LastKnownGroundPosition = Position;
                 LastKnownGroundVelocity = Velocity;
                 JumpState = JumpState.Idle;
@@ -397,7 +412,6 @@ namespace gravitymania.player
                 Velocity.Y = -JumpCancelGravity;
                 LastKnownGroundVelocity = Velocity;
             }
-            // TODO: a solution for the other one (i.e. rocketing off when leaving a flat slope to a downward one)
         }
 
         public float CurrentJumpHeight()
@@ -407,59 +421,13 @@ namespace gravitymania.player
 
         private Player OtherPlayer(MainGame game)
         {
-            return game.Players[(PlayerIndex+1)%2];
+            return game.Data[(PlayerIndex+1)%2].Player;
         }
 
         public void Render(SpriteBatch drawer, Camera camera)
         {
-            Rectangle box = camera.GetSpriteBox(Bounds);
+            Rectangle box = camera.GetSpriteBox(RoughBounds);
             drawer.Draw(Image, box, Color.BlanchedAlmond);
-        }
-
-		public CollisionResult GetFirstCollision(MainGame game, float currentTime = 0.0f)
-		{
-			return GetFirstCollision(game, currentTime, Vector2.Zero);
-		}
-
-		public CollisionResult GetFirstCollision(MainGame game, Vector2 disallowedNormal)
-		{
-			return GetFirstCollision(game, 0.0f, Vector2.Zero);
-		}
-
-        public CollisionResult GetFirstCollision(MainGame game, float currentTime, Vector2 disallowedNormal)
-        {
-            TileRange intersectedTiles = game.Maps[PlayerIndex].GetTileRange(GetCollisionBounds());
-
-            bool foundAny = false;
-            CollisionResult bestResult = new CollisionResult() { Time = 0.0f, Hit = false, };
-
-            foreach (TileIndex i in intersectedTiles.IterateTiles())
-            {
-                Vector2 offset = game.Maps[PlayerIndex].GetTileOffset(i.X, i.Y);
-
-                foreach (LineSegment segment in game.Maps[PlayerIndex].GetTileGeometry(i.X, i.Y))
-                {
-                    CollisionResult result;
-
-					if (Collide.CollideEllipseWithLine(GetCollision(), Velocity * (1.0f - currentTime), segment, out result))
-					{
-						if (result.Hit && (!foundAny || bestResult.Time > result.Time))
-						{
-							// This additional check is to avoid 'bumpiness' when transfering between pairs of line segments 
-							// Normally, the slightly altered normal when hitting the endpoints would cause it to treat 
-							// it as a discrete event, but since the normals are almost identical, they should not 
-							// cause a second collision event
-							if (Vector2.Dot(result.Normal, disallowedNormal) < (1.0f - 0.001f))
-							{
-								bestResult = result;
-								foundAny = true;
-							}
-						}
-					}
-                }
-            }
-
-            return bestResult;
         }
     }
 }

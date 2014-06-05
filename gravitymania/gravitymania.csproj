@@ -128,7 +128,8 @@
     <Compile Include="mapedit\MapEditor.cs" />
     <Compile Include="map\TileMap.cs" />
     <Compile Include="math\AABBox.cs" />
-    <Compile Include="math\Collide.cs" />
+    <Compile Include="collision\Collide.cs" />
+    <Compile Include="collision\GameCollision.cs" />
     <Compile Include="math\Ellipse.cs" />
     <Compile Include="math\Line2d.cs" />
     <Compile Include="graphics\TextureAsset.cs" />

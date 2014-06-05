@@ -16,8 +16,6 @@ namespace gravitymania.math
 
         public Vector2 Position;
         public float Radius;
-
-
     }
 
     public struct Ellipse
